@@ -1,36 +1,76 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Flux Embeds
 
-## Getting Started
+Flux Embeds is a Next.js application designed to build and host small, self-contained, iframe-friendly features — referred to as “embeds” — accessible under clean, dedicated URLs. This project aims to streamline the creation, development, and deployment of modular UI components that can be embedded across different platforms or sites.
 
-First, run the development server:
+---
+
+## Core Concepts
+
+- **Embeds:** Independent, minimal React components or features that run inside iframes. They are designed to be self-contained, with isolated styles and scripts to avoid conflicts.
+- **Clean URLs:** Each embed lives at a unique, semantic URL path, making them easy to reference and integrate.
+- **Next.js Framework:** Leverages Next.js for server-side rendering, routing, and static optimization.
+- **Generator:** A CLI tool to scaffold new embeds quickly and consistently.
+- **/dev Playground:** A dedicated development environment to preview and test embeds during development.
+
+---
+
+## Embed Architecture
+
+- **Isolated Components:** Each embed is a standalone React component housed under the `/embeds` directory.
+- **Iframe Hosting:** Embeds are rendered inside iframes to ensure style and script encapsulation.
+- **Routing:** Next.js dynamic routing maps embed names to their respective components and URLs.
+- **Styling:** Scoped CSS modules or styled-jsx are used to prevent styles leaking in or out.
+- **Communication:** Embeds can communicate with their parent frames via the `postMessage` API if needed.
+
+---
+
+## Using the Embed Generator
+
+To add a new embed, use the provided generator script:
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm run generate
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+or
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```bash
+yarn generate
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+The generator will prompt you to enter the embed name and set up the necessary files and boilerplate code automatically. This ensures consistency and speeds up development.
 
-## Learn More
+---
 
-To learn more about Next.js, take a look at the following resources:
+## Development with the /dev Playground
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+The `/dev` route serves as a playground for testing and previewing embeds in isolation during development. You can access it by navigating to:
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+```
+http://localhost:3000/dev
+```
 
-## Deploy on Vercel
+Here, you can select any embed to load and interact with it without embedding it elsewhere.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+---
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Embedding Conventions
+
+- **Iframe Attributes:** Use appropriate sandboxing and sizing attributes to maintain security and responsiveness.
+- **Communication:** Use `window.postMessage` for any interaction between the embed and its parent.
+- **Styling:** Avoid global styles; rely on scoped CSS to prevent conflicts.
+- **Performance:** Keep embeds lightweight and optimize dependencies to reduce load times.
+
+---
+
+## Deployment Notes
+
+- The app can be deployed on any platform that supports Next.js applications, such as Vercel or Netlify.
+- Static optimization and caching are leveraged for fast load times.
+- Ensure your hosting environment supports rewrites or redirects if you modify embed URL structures.
+
+---
+
+## License
+
+This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.

@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "gen:feature": "node --loader ts-node/esm scripts/gen-feature.ts"
   },
   "dependencies": {
     "next": "16.1.6",

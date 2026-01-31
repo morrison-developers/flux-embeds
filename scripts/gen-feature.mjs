@@ -34,6 +34,36 @@ function fileExists(p) {
   return fs.existsSync(p);
 }
 
+function findMatchingDivClose(src, openTagIndex) {
+  // openTagIndex should point at the start of an opening "<div"
+  let i = openTagIndex;
+  let depth = 0;
+
+  while (i < src.length) {
+    const nextOpen = src.indexOf('<div', i);
+    const nextClose = src.indexOf('</div>', i);
+
+    if (nextOpen === -1 && nextClose === -1) break;
+
+    if (nextOpen !== -1 && (nextClose === -1 || nextOpen < nextClose)) {
+      depth += 1;
+      i = nextOpen + 4;
+      continue;
+    }
+
+    if (nextClose !== -1) {
+      depth -= 1;
+      if (depth === 0) {
+        return nextClose;
+      }
+      i = nextClose + 6;
+      continue;
+    }
+  }
+
+  return -1;
+}
+
 function addDevEntry(devPagePath, feature) {
   const src = fs.readFileSync(devPagePath, 'utf8');
 
@@ -61,6 +91,52 @@ function addDevEntry(devPagePath, feature) {
 
   const next = src.replace(match[0], updatedBlock);
   fs.writeFileSync(devPagePath, next, 'utf8');
+  return { changed: true };
+}
+
+function addLandingEntry(landingPagePath, feature) {
+  const src = fs.readFileSync(landingPagePath, 'utf8');
+
+  // Avoid duplicates by naive check
+  if (src.includes(`href="${feature.path}"`) || src.includes(`href='${feature.path}'`)) {
+    return { changed: false, reason: 'Landing entry already exists.' };
+  }
+
+  const builtMarker = 'Built so far';
+  const builtIdx = src.indexOf(builtMarker);
+  if (builtIdx === -1) {
+    throw new Error(
+      `Could not find "${builtMarker}" section in ${landingPagePath}. Update generator or landing markup.`
+    );
+  }
+
+  const gridMarker = '<div className="grid gap-2">';
+  const gridIdx = src.indexOf(gridMarker, builtIdx);
+  if (gridIdx === -1) {
+    throw new Error(
+      `Could not find Built-so-far links grid (${gridMarker}) in ${landingPagePath}.`
+    );
+  }
+
+  const closeIdx = findMatchingDivClose(src, gridIdx);
+  if (closeIdx === -1) {
+    throw new Error(`Failed to locate closing </div> for built-so-far grid in ${landingPagePath}`);
+  }
+
+  const insertion = `
+                  <a
+                    href="${feature.path}"
+                    className="flex items-center justify-between rounded-xl border border-zinc-200 bg-white px-3 py-2 text-sm font-medium text-zinc-900 shadow-sm transition hover:bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-50 dark:hover:bg-zinc-900"
+                  >
+                    <span>${feature.name}</span>
+                    <span className="text-xs font-semibold text-zinc-500 dark:text-zinc-400">
+                      ${feature.path}
+                    </span>
+                  </a>
+`;
+
+  const next = src.slice(0, closeIdx) + insertion + src.slice(closeIdx);
+  fs.writeFileSync(landingPagePath, next, 'utf8');
   return { changed: true };
 }
 
@@ -137,6 +213,15 @@ async function main() {
       includeDevEntry = parseYesNo(rawDev, true);
     }
 
+    const landingPagePath = path.join(process.cwd(), 'app', 'page.tsx');
+    const hasLandingPage = fileExists(landingPagePath);
+
+    let includeLandingEntry = false;
+    if (hasLandingPage) {
+      const rawLanding = await ask(rl, 'Add embed to landing page list? (Y/n): ');
+      includeLandingEntry = parseYesNo(rawLanding, true);
+    }
+
     // Paths
     const embedDir = path.join(process.cwd(), 'app', '(embed)', slug);
     const embedPagePath = path.join(embedDir, 'page.tsx');
@@ -170,6 +255,14 @@ async function main() {
       });
     }
 
+    // Add landing page entry (optional)
+    if (includeLandingEntry && hasLandingPage) {
+      addLandingEntry(landingPagePath, {
+        name: `${title} embed`,
+        path: `/${slug}`,
+      });
+    }
+
     console.log('\n✅ Generated feature:');
     console.log(`- Embed page: ${path.relative(process.cwd(), embedPagePath)}`);
     if (includeApi) {
@@ -177,6 +270,9 @@ async function main() {
     }
     if (includeDevEntry && hasDevPage) {
       console.log(`- /dev entry: added`);
+    }
+    if (includeLandingEntry && hasLandingPage) {
+      console.log(`- landing entry: added`);
     }
 
     console.log('\nNext:');

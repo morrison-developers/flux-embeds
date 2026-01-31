@@ -1,7 +1,7 @@
 export default function DevPage() {
   const embeds = [
-    { name: 'Contact', path: '/contact?embedded=true&dense=true' }
-  ];
+    { name: 'Contact', path: '/contact?embedded=true&dense=true' },
+];
 
   return (
     <div style={{ padding: 24, fontFamily: 'system-ui' }}>

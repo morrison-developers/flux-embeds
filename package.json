@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "gen:feature": "node --loader ts-node/esm scripts/gen-feature.ts"
+    "gen:feature": "node scripts/gen-feature.mjs"
   },
   "dependencies": {
     "next": "16.1.6",

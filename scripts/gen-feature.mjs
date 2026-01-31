@@ -1,15 +1,9 @@
+// scripts/gen-feature.mjs
 import fs from 'node:fs';
 import path from 'node:path';
 import readline from 'node:readline';
 
-type Answers = {
-  featureName: string; // slug
-  title: string;
-  includeApi: boolean;
-  includeDevEntry: boolean;
-};
-
-function toSlug(input: string) {
+function toSlug(input) {
   return input
     .trim()
     .toLowerCase()
@@ -17,33 +11,33 @@ function toSlug(input: string) {
     .replace(/^-+|-+$/g, '');
 }
 
-function toTitle(slug: string) {
+function toTitle(slug) {
   return slug
     .split('-')
     .filter(Boolean)
-    .map((w) => w[0]?.toUpperCase() + w.slice(1))
+    .map((w) => (w[0] ? w[0].toUpperCase() + w.slice(1) : w))
     .join(' ');
 }
 
-function ensureDir(p: string) {
+function ensureDir(p) {
   fs.mkdirSync(p, { recursive: true });
 }
 
-function writeFileGuarded(filePath: string, content: string) {
+function writeFileGuarded(filePath, content) {
   if (fs.existsSync(filePath)) {
     throw new Error(`Refusing to overwrite existing file: ${filePath}`);
   }
   fs.writeFileSync(filePath, content, 'utf8');
 }
 
-function fileExists(p: string) {
+function fileExists(p) {
   return fs.existsSync(p);
 }
 
-function addDevEntry(devPagePath: string, feature: { name: string; path: string }) {
+function addDevEntry(devPagePath, feature) {
   const src = fs.readFileSync(devPagePath, 'utf8');
 
-  // Expect something like: const embeds = [ ... ];
+  // Expect: const embeds = [ ... ];
   const embedsDecl = /const\s+embeds\s*=\s*\[(.|\n|\r)*?\];/m;
   const match = src.match(embedsDecl);
   if (!match) {
@@ -52,36 +46,37 @@ function addDevEntry(devPagePath: string, feature: { name: string; path: string 
     );
   }
 
-  // Insert before closing ];
-  const insertion = `  { name: '${feature.name}', path: '${feature.path}' },\n`;
-  const updated = match[0].replace(/\]\s*;$/, `${insertion}];`);
-
-  if (updated === match[0]) {
-    throw new Error(`Failed to update embeds array in ${devPagePath}`);
-  }
-
   // Avoid duplicates by naive check
   if (src.includes(feature.path)) {
     return { changed: false, reason: 'Dev entry already exists.' };
   }
 
-  const next = src.replace(match[0], updated);
+  // Insert before closing ];
+  const insertion = `  { name: '${feature.name}', path: '${feature.path}' },\n`;
+  const updatedBlock = match[0].replace(/\]\s*;$/, `${insertion}];`);
+
+  if (updatedBlock === match[0]) {
+    throw new Error(`Failed to update embeds array in ${devPagePath}`);
+  }
+
+  const next = src.replace(match[0], updatedBlock);
   fs.writeFileSync(devPagePath, next, 'utf8');
   return { changed: true };
 }
 
-function templateEmbedPage(opts: { title: string; slug: string }) {
+function templateEmbedPage({ title, slug }) {
+  const componentName = `${title.replace(/[^a-zA-Z0-9]/g, '')}Page`;
   return `'use client';
 
 import { EmbedShell } from '../_shared/EmbedShell';
 
-export default function ${opts.title.replace(/\s/g, '')}Page() {
+export default function ${componentName}() {
   return (
-    <EmbedShell title="${opts.title}">
-      <div style={{ display: 'grid', gap: 12 }}>
-        <div style={{ fontSize: 18, fontWeight: 700 }}>${opts.title} embed</div>
+    <EmbedShell title="${title}">
+      <div style={{ display: 'grid', gap: 12, maxWidth: 720 }}>
+        <div style={{ fontSize: 18, fontWeight: 700 }}>${title} embed</div>
         <div style={{ opacity: 0.75 }}>
-          Starter page at <code>/(embed)/${opts.slug}</code>.
+          Starter page at <code>/(embed)/${slug}</code>.
         </div>
       </div>
     </EmbedShell>
@@ -90,25 +85,25 @@ export default function ${opts.title.replace(/\s/g, '')}Page() {
 `;
 }
 
-function templateApiRoute(opts: { slug: string }) {
+function templateApiRoute({ slug }) {
   return `import { NextResponse } from 'next/server';
 
 export async function GET() {
   return NextResponse.json({
     ok: true,
-    feature: '${opts.slug}',
+    feature: '${slug}',
     data: null,
   });
 }
 `;
 }
 
-async function ask(rl: readline.Interface, q: string) {
-  return new Promise<string>((resolve) => rl.question(q, resolve));
+async function ask(rl, q) {
+  return new Promise((resolve) => rl.question(q, resolve));
 }
 
-function yes(input: string, defaultValue: boolean) {
-  const v = input.trim().toLowerCase();
+function parseYesNo(input, defaultValue) {
+  const v = (input ?? '').trim().toLowerCase();
   if (!v) return defaultValue;
   if (['y', 'yes', 'true', '1'].includes(v)) return true;
   if (['n', 'no', 'false', '0'].includes(v)) return false;
@@ -131,64 +126,62 @@ async function main() {
     const title = rawTitle.trim() ? rawTitle.trim() : defaultTitle;
 
     const rawApi = await ask(rl, 'Include API route? (Y/n): ');
-    const includeApi = yes(rawApi, true);
+    const includeApi = parseYesNo(rawApi, true);
 
     const devPagePath = path.join(process.cwd(), 'app', 'dev', 'page.tsx');
     const hasDevPage = fileExists(devPagePath);
-    let includeDevEntry = false;
 
+    let includeDevEntry = false;
     if (hasDevPage) {
       const rawDev = await ask(rl, 'Add embed to /dev page? (Y/n): ');
-      includeDevEntry = yes(rawDev, true);
+      includeDevEntry = parseYesNo(rawDev, true);
     }
 
-    const answers: Answers = { featureName: slug, title, includeApi, includeDevEntry };
-
     // Paths
-    const embedDir = path.join(process.cwd(), 'app', '(embed)', answers.featureName);
+    const embedDir = path.join(process.cwd(), 'app', '(embed)', slug);
     const embedPagePath = path.join(embedDir, 'page.tsx');
 
-    const apiDir = path.join(process.cwd(), 'app', 'api', 'features', answers.featureName);
+    const apiDir = path.join(process.cwd(), 'app', 'api', 'features', slug);
     const apiRoutePath = path.join(apiDir, 'route.ts');
 
-    // Guard: prevent duplicates
+    // Guard
     if (fileExists(embedPagePath)) {
       throw new Error(`Embed page already exists: ${embedPagePath}`);
     }
-    if (answers.includeApi && fileExists(apiRoutePath)) {
+    if (includeApi && fileExists(apiRoutePath)) {
       throw new Error(`API route already exists: ${apiRoutePath}`);
     }
 
     // Create embed page
     ensureDir(embedDir);
-    writeFileGuarded(embedPagePath, templateEmbedPage({ title: answers.title, slug }));
+    writeFileGuarded(embedPagePath, templateEmbedPage({ title, slug }));
 
     // Create API route (optional)
-    if (answers.includeApi) {
+    if (includeApi) {
       ensureDir(apiDir);
       writeFileGuarded(apiRoutePath, templateApiRoute({ slug }));
     }
 
     // Add dev page entry (optional)
-    if (answers.includeDevEntry && hasDevPage) {
-      const devResult = addDevEntry(devPagePath, {
-        name: answers.title,
+    if (includeDevEntry && hasDevPage) {
+      addDevEntry(devPagePath, {
+        name: title,
         path: `/${slug}?embedded=true&dense=true`,
       });
-
-      if (devResult.changed) {
-        // ok
-      }
     }
 
     console.log('\n✅ Generated feature:');
     console.log(`- Embed page: ${path.relative(process.cwd(), embedPagePath)}`);
-    if (answers.includeApi) {
+    if (includeApi) {
       console.log(`- API route:  ${path.relative(process.cwd(), apiRoutePath)}`);
     }
-    if (answers.includeDevEntry && hasDevPage) {
+    if (includeDevEntry && hasDevPage) {
       console.log(`- /dev entry: added`);
     }
+
+    console.log('\nNext:');
+    console.log(`- Visit: /${slug}?embedded=true&dense=true`);
+    if (includeApi) console.log(`- API:   /api/features/${slug}`);
   } finally {
     rl.close();
   }

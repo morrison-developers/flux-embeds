@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useMemo, useRef } from 'react';
+import React, { useEffect, useMemo, useRef, useState, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { attachAutoResize } from './iframe';
 
@@ -17,11 +17,30 @@ function parseEmbedParams(sp: ReturnType<typeof useSearchParams>): EmbedParams {
   return { embedded, bg, dense };
 }
 
-export function EmbedShell(props: { title?: string; children: React.ReactNode }) {
+function EmbedParamsBridge({
+  onChange,
+}: {
+  onChange: (params: EmbedParams) => void;
+}) {
   const sp = useSearchParams();
+
+  const parsed = useMemo(() => parseEmbedParams(sp), [sp]);
+
+  useEffect(() => {
+    onChange(parsed);
+  }, [parsed, onChange]);
+
+  return null;
+}
+
+export function EmbedShell(props: { title?: string; children: React.ReactNode }) {
   const rootRef = useRef<HTMLDivElement | null>(null);
 
-  const params = useMemo(() => parseEmbedParams(sp), [sp]);
+  const [params, setParams] = useState<EmbedParams>({
+    embedded: false,
+    bg: 'default',
+    dense: false,
+  });
 
   useEffect(() => {
     if (!rootRef.current) return;
@@ -40,6 +59,10 @@ export function EmbedShell(props: { title?: string; children: React.ReactNode })
         background: params.bg === 'transparent' ? 'transparent' : '#fff',
       }}
     >
+      <Suspense fallback={null}>
+        <EmbedParamsBridge onChange={setParams} />
+      </Suspense>
+
       <div
         style={{
           padding,

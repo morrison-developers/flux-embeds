@@ -29,7 +29,7 @@ export async function POST(req: Request) {
   const last = lastSubmitByIp.get(ip);
   if (last && now - last < THROTTLE_MS) {
     return NextResponse.json(
-      { ok: false, error: 'Please wait a moment and try again.' },
+      { ok: false, error: 'Please wait a moment and try again.', ui: { action: null } },
       { status: 429 }
     );
   }
@@ -39,7 +39,7 @@ export async function POST(req: Request) {
     body = (await req.json()) as Body;
   } catch {
     return NextResponse.json(
-      { ok: false, error: 'Invalid JSON body.' },
+      { ok: false, error: 'Invalid JSON body.', ui: { action: null } },
       { status: 400 }
     );
   }
@@ -51,21 +51,21 @@ export async function POST(req: Request) {
 
   if (!name) {
     return NextResponse.json(
-      { ok: false, error: 'Name is required.' },
+      { ok: false, error: 'Name is required.', ui: { action: null } },
       { status: 400 }
     );
   }
 
   if (!email || !isValidEmail(email)) {
     return NextResponse.json(
-      { ok: false, error: 'Valid email is required.' },
+      { ok: false, error: 'Valid email is required.', ui: { action: null } },
       { status: 400 }
     );
   }
 
   if (!message || message.length < 10) {
     return NextResponse.json(
-      { ok: false, error: 'Message must be at least 10 characters.' },
+      { ok: false, error: 'Message must be at least 10 characters.', ui: { action: null } },
       { status: 400 }
     );
   }
@@ -76,7 +76,13 @@ export async function POST(req: Request) {
 
   lastSubmitByIp.set(ip, now);
 
-  return NextResponse.json({ ok: true });
+  return NextResponse.json({
+    ok: true,
+    message: "Thanks — we got your message.",
+    ui: {
+      action: "CLOSE_MODAL",
+    },
+  });
 }
 
 export async function GET() {

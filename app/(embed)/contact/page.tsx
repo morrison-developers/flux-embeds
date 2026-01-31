@@ -52,8 +52,8 @@ export default function ContactPage() {
       });
 
       const json = (await res.json()) as
-        | { ok: true }
-        | { ok: false; error: string };
+        | { ok: true; message?: string; ui?: { action?: string | null } }
+        | { ok: false; error: string; ui?: { action?: string | null } };
 
       if (!res.ok || !json.ok) {
         setStatus({
@@ -65,6 +65,21 @@ export default function ContactPage() {
 
       setStatus({ type: 'success' });
       setForm({ name: '', email: '', message: '', company: '' });
+
+      const action = json.ok ? json.ui?.action : null;
+
+      if (action === 'CLOSE_MODAL') {
+        // Only meaningful when embedded in an iframe.
+        if (window.parent && window.parent !== window) {
+          console.log('[embed] posting CLOSE_MODAL to parent');
+          window.parent.postMessage(
+            { type: 'EMBED_ACTION', action: 'CLOSE_MODAL', embed: 'contact' },
+            '*'
+          );
+        } else {
+          console.log('[embed] CLOSE_MODAL requested but not in iframe');
+        }
+      }
     } catch (err) {
       setStatus({
         type: 'error',

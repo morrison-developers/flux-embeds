@@ -10,6 +10,8 @@
     "gen:feature": "node scripts/gen-feature.mjs"
   },
   "dependencies": {
+    "@tsparticles/react": "^3.0.0",
+    "@tsparticles/slim": "^3.9.1",
     "next": "16.1.6",
     "react": "19.2.3",
     "react-dom": "19.2.3"

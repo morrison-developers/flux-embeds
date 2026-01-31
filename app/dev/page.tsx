@@ -1,6 +1,7 @@
 export default function DevPage() {
   const embeds = [
     { name: 'Contact', path: '/contact?embedded=true&dense=true' },
+    { name: 'Mor Dev Particles', path: '/mor-dev-particles?embedded=true&dense=true' },
 ];
 
   return (

@@ -65,7 +65,6 @@ export function EmbedShell(props: { title?: string; children: React.ReactNode })
 
       <div
         style={{
-          padding,
           fontFamily:
             'ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial',
         }}

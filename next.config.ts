@@ -14,8 +14,11 @@ const nextConfig: NextConfig = {
             value:
               "frame-ancestors 'self' http://localhost:3000 http://localhost:5173 https://*.host.com;",
           },
-          // Legacy header; CSP is the real control.
-          { key: 'X-Frame-Options', value: 'SAMEORIGIN' },
+          // Override Next/Vercel's default X-Frame-Options=SAMEORIGIN.
+          // We rely on CSP `frame-ancestors` as the real allowlist for embedding.
+          // Using a non-standard value makes the header effectively ignored by modern browsers
+          // while still preventing the platform from injecting SAMEORIGIN.
+          { key: 'X-Frame-Options', value: 'ALLOWALL' },
           { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
         ],
       },

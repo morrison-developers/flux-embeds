@@ -79,12 +79,12 @@ flux-embeds prioritizes correctness, isolation, and predictability over abstract
         <header className="flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-3">
             <Image
-              className="dark:invert"
-              src="/next.svg"
-              alt="Logo"
-              width={92}
-              height={20}
+              src="/wordmark.webp"
+              alt="Morrison Developers"
+              width={180}
+              height={40}
               priority
+              className="h-10 w-auto"
             />
             <div className="flex flex-col">
               <div className="text-sm font-semibold tracking-wide text-zinc-700 dark:text-zinc-300">

@@ -43,6 +43,9 @@ export async function POST(
     if (error instanceof ZodError) {
       return apiError(400, 'Invalid request payload.', 'BAD_REQUEST');
     }
+    if (error instanceof Error && error.message === 'OWNERS_REQUIRED') {
+      return apiError(409, 'At least one board owner is required before filling blank squares.', 'CONFLICT');
+    }
     if (isEnvConfigError(error)) {
       return apiError(500, error.message, error.code);
     }

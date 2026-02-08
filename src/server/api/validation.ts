@@ -60,5 +60,5 @@ export const guestPickSchema = z.object({
 });
 
 export const guestAdminActionSchema = z.object({
-  action: z.enum(['clear_picks', 'clear_winners', 'clear_all', 'seed_demo']),
+  action: z.enum(['clear_picks', 'clear_winners', 'clear_all', 'seed_demo', 'fill_blanks_balanced']),
 });

@@ -510,9 +510,55 @@ function shuffledMarkers() {
   return digits;
 }
 
+function fillBlankSquaresBalanced(matrix: string[][], ownerInitials: string[]) {
+  if (ownerInitials.length === 0) {
+    throw new Error('OWNERS_REQUIRED');
+  }
+
+  const counts = new Map<string, number>();
+  for (const initials of ownerInitials) {
+    counts.set(initials, 0);
+  }
+
+  const blankCells: Array<{ row: number; col: number }> = [];
+  for (let row = 0; row < 10; row += 1) {
+    for (let col = 0; col < 10; col += 1) {
+      const cell = matrix[row]?.[col]?.trim() ?? '';
+      if (!cell) {
+        blankCells.push({ row, col });
+        continue;
+      }
+      if (counts.has(cell)) {
+        counts.set(cell, (counts.get(cell) ?? 0) + 1);
+      }
+    }
+  }
+
+  for (const cell of blankCells) {
+    let minCount = Number.POSITIVE_INFINITY;
+    const candidates: string[] = [];
+    for (const initials of ownerInitials) {
+      const count = counts.get(initials) ?? 0;
+      if (count < minCount) {
+        minCount = count;
+        candidates.length = 0;
+        candidates.push(initials);
+      } else if (count === minCount) {
+        candidates.push(initials);
+      }
+    }
+
+    const pick = candidates[Math.floor(Math.random() * candidates.length)];
+    matrix[cell.row][cell.col] = pick;
+    counts.set(pick, (counts.get(pick) ?? 0) + 1);
+  }
+
+  return matrix;
+}
+
 export async function runGuestAdminAction(params: {
   boardId: string;
-  action: 'clear_picks' | 'clear_winners' | 'clear_all' | 'seed_demo';
+  action: 'clear_picks' | 'clear_winners' | 'clear_all' | 'seed_demo' | 'fill_blanks_balanced';
 }) {
   await getOrCreateBoard(params.boardId);
 
@@ -566,6 +612,33 @@ export async function runGuestAdminAction(params: {
             rowMarkers: shuffledMarkers(),
             columnMarkers: shuffledMarkers(),
           },
+        });
+      });
+      return { action: params.action, ok: true };
+    }
+    case 'fill_blanks_balanced': {
+      await prisma.$transaction(async (tx) => {
+        const board = await tx.board.findUnique({
+          where: { id: params.boardId },
+          select: {
+            assignments: true,
+            owners: {
+              orderBy: { sortOrder: 'asc' },
+              select: { initials: true },
+            },
+          },
+        });
+
+        if (!board) {
+          throw new Error('BOARD_NOT_FOUND');
+        }
+
+        const ownerInitials = board.owners.map((owner) => owner.initials.trim()).filter(Boolean);
+        const nextAssignments = fillBlankSquaresBalanced(toMatrix(board.assignments), ownerInitials);
+
+        await tx.board.update({
+          where: { id: params.boardId },
+          data: { assignments: nextAssignments },
         });
       });
       return { action: params.action, ok: true };

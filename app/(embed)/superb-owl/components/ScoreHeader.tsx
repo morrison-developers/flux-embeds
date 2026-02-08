@@ -19,13 +19,27 @@ export function ScoreHeader({ game }: { game: GameSnapshot }) {
   }, [game.kickoffAt, game.status, nowMs]);
   const awayPalette = useMemo(() => getTeamPalette(game.awayTeam, 'away'), [game.awayTeam]);
   const homePalette = useMemo(() => getTeamPalette(game.homeTeam, 'home'), [game.homeTeam]);
+  const isLive = game.status === 'live';
+  const isLiveQ1 = isLive && game.period === 1;
 
   return (
     <div className={`${styles.card} ${styles.scoreCard}`}>
       <div className={styles.scoreTopRow}>
         <div className={styles.kicker}>Game center</div>
-        <div className={styles.scoreStatusPill}>
-          {game.status.toUpperCase()} · Q{game.period} · {game.clock}
+        <div className={styles.scoreTopRight}>
+          {isLive ? (
+            <span className={styles.liveBug} aria-label="Live game">
+              <span className={styles.liveBugDot} aria-hidden="true" />
+              LIVE
+            </span>
+          ) : null}
+          <div className={`${styles.scoreStatusPill} ${isLiveQ1 ? styles.scoreStatusPillQ1Live : ''}`}>
+            <span className={isLiveQ1 ? styles.scoreStatusLive : ''}>{game.status.toUpperCase()}</span>
+            <span className={styles.scoreStatusSep}>·</span>
+            <span className={isLiveQ1 ? styles.scoreStatusLive : ''}>Q{game.period}</span>
+            <span className={styles.scoreStatusSep}>·</span>
+            <span className={isLiveQ1 ? styles.scoreStatusLiveTime : ''}>{game.clock}</span>
+          </div>
         </div>
       </div>
       <div className={styles.scoreSubRow}>

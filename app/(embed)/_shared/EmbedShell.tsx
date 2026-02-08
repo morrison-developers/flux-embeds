@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useMemo, useRef, useState, Suspense } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { attachAutoResize } from './iframe';
 
@@ -10,9 +10,21 @@ type EmbedParams = {
   dense: boolean;
 };
 
-function parseEmbedParams(sp: ReturnType<typeof useSearchParams>): EmbedParams {
+type ParsedEmbedParams = {
+  embedded: boolean;
+  bg?: 'default' | 'transparent';
+  dense: boolean;
+};
+
+function parseEmbedParams(sp: ReturnType<typeof useSearchParams>): ParsedEmbedParams {
   const embedded = sp.get('embedded') === 'true';
-  const bg = sp.get('bg') === 'transparent' ? 'transparent' : 'default';
+  const bgParam = sp.get('bg');
+  const bg =
+    bgParam === 'transparent'
+      ? 'transparent'
+      : bgParam === 'default'
+        ? 'default'
+        : undefined;
   const dense = sp.get('dense') === 'true';
   return { embedded, bg, dense };
 }
@@ -20,7 +32,7 @@ function parseEmbedParams(sp: ReturnType<typeof useSearchParams>): EmbedParams {
 function EmbedParamsBridge({
   onChange,
 }: {
-  onChange: (params: EmbedParams) => void;
+  onChange: (params: ParsedEmbedParams) => void;
 }) {
   const sp = useSearchParams();
 
@@ -33,12 +45,16 @@ function EmbedParamsBridge({
   return null;
 }
 
-export function EmbedShell(props: { title?: string; children: React.ReactNode }) {
+export function EmbedShell(props: {
+  title?: string;
+  children: React.ReactNode;
+  defaultBg?: 'default' | 'transparent';
+}) {
   const rootRef = useRef<HTMLDivElement | null>(null);
 
   const [params, setParams] = useState<EmbedParams>({
     embedded: false,
-    bg: 'default',
+    bg: props.defaultBg ?? 'default',
     dense: false,
   });
 
@@ -47,7 +63,29 @@ export function EmbedShell(props: { title?: string; children: React.ReactNode })
     return attachAutoResize(rootRef.current);
   }, []);
 
-  const padding = params.dense ? 12 : 20;
+  const handleParamsChange = useCallback(
+    (next: ParsedEmbedParams) => {
+      setParams((prev) => {
+        const nextBg = next.bg ?? prev.bg ?? props.defaultBg ?? 'default';
+
+        if (
+          prev.embedded === next.embedded &&
+          prev.dense === next.dense &&
+          prev.bg === nextBg
+        ) {
+          return prev;
+        }
+
+        return {
+          ...prev,
+          embedded: next.embedded,
+          dense: next.dense,
+          bg: nextBg,
+        };
+      });
+    },
+    [props.defaultBg]
+  );
 
   return (
     <div
@@ -55,12 +93,11 @@ export function EmbedShell(props: { title?: string; children: React.ReactNode })
       data-embed-bg={params.bg === 'transparent' ? 'transparent' : undefined}
       style={{
         width: '100%',
-        minHeight: '100%',
         background: params.bg === 'transparent' ? 'transparent' : '#fff',
       }}
     >
       <Suspense fallback={null}>
-        <EmbedParamsBridge onChange={setParams} />
+        <EmbedParamsBridge onChange={handleParamsChange} />
       </Suspense>
 
       <div

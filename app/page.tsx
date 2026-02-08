@@ -176,7 +176,17 @@ flux-embeds prioritizes correctness, isolation, and predictability over abstract
                       /mor-dev-particles
                     </span>
                   </a>
-                </div>
+                
+                  <a
+                    href="/superb-owl?board=default"
+                    className="flex items-center justify-between rounded-xl border border-zinc-200 bg-white px-3 py-2 text-sm font-medium text-zinc-900 shadow-sm transition hover:bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-50 dark:hover:bg-zinc-900"
+                  >
+                    <span>Superb Owl embed</span>
+                    <span className="text-xs font-semibold text-zinc-500 dark:text-zinc-400">
+                      /superb-owl?board=default
+                    </span>
+                  </a>
+</div>
 
                 <div className="mt-3 text-xs text-zinc-500 dark:text-zinc-400">
                   Add embeds under <span className="font-mono">app/(embed)/&lt;name&gt;/page.tsx</span>. Use{" "}

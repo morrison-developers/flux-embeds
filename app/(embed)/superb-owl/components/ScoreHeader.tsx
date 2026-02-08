@@ -26,20 +26,27 @@ export function ScoreHeader({ game }: { game: GameSnapshot }) {
     <div className={`${styles.card} ${styles.scoreCard}`}>
       <div className={styles.scoreTopRow}>
         <div className={styles.kicker}>Game center</div>
-        <div className={styles.scoreTopRight}>
+        <div
+          className={`${styles.scoreStatusPill} ${isLive ? styles.scoreStatusPillLive : ''} ${isLiveQ1 ? styles.scoreStatusPillQ1Live : ''}`}
+        >
           {isLive ? (
-            <span className={styles.liveBug} aria-label="Live game">
+            <>
               <span className={styles.liveBugDot} aria-hidden="true" />
-              LIVE
-            </span>
-          ) : null}
-          <div className={`${styles.scoreStatusPill} ${isLiveQ1 ? styles.scoreStatusPillQ1Live : ''}`}>
-            <span className={isLiveQ1 ? styles.scoreStatusLive : ''}>{game.status.toUpperCase()}</span>
-            <span className={styles.scoreStatusSep}>·</span>
-            <span className={isLiveQ1 ? styles.scoreStatusLive : ''}>Q{game.period}</span>
-            <span className={styles.scoreStatusSep}>·</span>
-            <span className={isLiveQ1 ? styles.scoreStatusLiveTime : ''}>{game.clock}</span>
-          </div>
+              <span className={styles.scoreStatusLive}>LIVE</span>
+              <span className={styles.scoreStatusSep}>·</span>
+              <span className={isLiveQ1 ? styles.scoreStatusLive : ''}>Q{game.period}</span>
+              <span className={styles.scoreStatusSep}>·</span>
+              <span className={isLiveQ1 ? styles.scoreStatusLiveTime : ''}>{game.clock}</span>
+            </>
+          ) : (
+            <>
+              <span>{game.status.toUpperCase()}</span>
+              <span className={styles.scoreStatusSep}>·</span>
+              <span>Q{game.period}</span>
+              <span className={styles.scoreStatusSep}>·</span>
+              <span>{game.clock}</span>
+            </>
+          )}
         </div>
       </div>
       <div className={styles.scoreSubRow}>

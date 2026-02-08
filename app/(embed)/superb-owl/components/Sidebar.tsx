@@ -20,7 +20,7 @@ export function Sidebar({
           className={winningOwner ? styles.currentWinner : `${styles.currentWinner} ${styles.winnerUnknown}`}
           style={buildCurrentWinnerStyle(winningOwner)}
         >
-          {winningOwner ? `${winningOwner.initials} · ${winningOwner.displayName}` : 'No winner yet'}
+          {winningOwner ? winningOwner.displayName : 'No winner yet'}
         </div>
       </div>
 

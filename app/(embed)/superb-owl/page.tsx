@@ -10,7 +10,7 @@ import { Sidebar } from './components/Sidebar';
 import { useBoardLiveData } from './hooks/useBoardLiveData';
 import { useEmbedGuestAuth } from './hooks/useEmbedGuestAuth';
 import { parseSuperbOwlQuery } from './query';
-import type { QuarterWinner } from '@/src/types/superbowl';
+import type { BoardConfig, QuarterWinner, WinningCell } from '@/src/types/superbowl';
 import styles from './superbowl.module.css';
 
 const OWNER_COLOR_CHOICES = [
@@ -106,6 +106,7 @@ function SuperbOwlPageContent() {
     displayBoard && guestOwner
       ? displayBoard.assignments.flat().filter((cell) => cell.trim() === guestOwner.initials).length
       : 0;
+  const shouldRevealOutcome = data ? data.game.status === 'live' || data.game.status === 'final' : false;
   const isGuestLocked = Boolean(guestOwner?.lockedAt);
   const isSuperAdminGuest = (auth.guestName ?? '').trim().toLowerCase() === 'admin adminson';
   const shouldShowOnboarding =
@@ -117,6 +118,27 @@ function SuperbOwlPageContent() {
     if (quarterPreviewStage <= 0 || !canToggleTestMode) return data.quarterWinners;
     return buildQuarterPreviewWinners(data.board.id, data.board.owners, quarterPreviewStage);
   }, [canToggleTestMode, data, quarterPreviewStage]);
+  const gridPresentation = useMemo(() => {
+    if (!data) return null;
+    const board = displayBoard ?? data.board;
+    return shouldRevealOutcome
+      ? buildStartedGameGridPresentation(board, data.winningCell)
+      : buildDefaultGridPresentation(board, data.winningCell);
+  }, [data, displayBoard, shouldRevealOutcome]);
+  const gridBusyCellKeys = useMemo(() => {
+    if (!gridPresentation) return pendingPickCells;
+    const mapped: Record<string, boolean> = {};
+    for (const [key, busy] of Object.entries(pendingPickCells)) {
+      if (!busy) continue;
+      const [rowRaw, colRaw] = key.split(':');
+      const sourceRow = Number(rowRaw);
+      const sourceCol = Number(colRaw);
+      if (!Number.isInteger(sourceRow) || !Number.isInteger(sourceCol)) continue;
+      const displayCell = gridPresentation.toDisplayCell(sourceRow, sourceCol);
+      mapped[`${displayCell.row}:${displayCell.col}`] = true;
+    }
+    return mapped;
+  }, [gridPresentation, pendingPickCells]);
 
   useEffect(() => {
     setLocalPickOverrides({});
@@ -226,6 +248,19 @@ function SuperbOwlPageContent() {
       | 'fill_blanks_balanced'
   ) {
     if (!auth.guestName || !boardId || adminBusyAction) return;
+    const needsTestModeEnabled =
+      action === 'clear_picks' ||
+      action === 'clear_winners' ||
+      action === 'clear_all' ||
+      action === 'seed_demo';
+    if (needsTestModeEnabled && !testModeEnabled) {
+      setAdminStatus('Enable Test Mode before running this action.');
+      return;
+    }
+    if (needsTestModeEnabled) {
+      const confirmed = window.confirm(getAdminActionConfirmationMessage(action));
+      if (!confirmed) return;
+    }
     setAdminStatus(null);
     setAdminBusyAction(action);
     try {
@@ -409,6 +444,7 @@ function SuperbOwlPageContent() {
                     busyAction={adminBusyAction}
                     status={adminStatus}
                     onRunAction={runAdminAction}
+                    testModeEnabled={testModeEnabled}
                     homeTeam={data.game.homeTeam}
                     awayTeam={data.game.awayTeam}
                     onSimulateHomeScore={() => simulateScoreEvent('home')}
@@ -419,13 +455,20 @@ function SuperbOwlPageContent() {
                 ) : null}
                 <ScoreHeader game={data.game} />
                 <Grid
-                  board={displayBoard ?? data.board}
-                  winningCell={data.winningCell}
+                  board={gridPresentation?.board ?? (displayBoard ?? data.board)}
+                  winningCell={gridPresentation?.winningCell ?? data.winningCell}
                   ownerInitials={guestOwner?.initials}
-                  onCellToggle={guestOwner && !isGuestLocked ? toggleGuestPick : undefined}
-                  busyCellKeys={pendingPickCells}
-                  revealMarkers={data.game.status === 'live' || data.game.status === 'final'}
-                  revealWinner={data.game.status === 'live' || data.game.status === 'final'}
+                  onCellToggle={
+                    guestOwner && !isGuestLocked
+                      ? (row, col, selected) => {
+                          const sourceCell = gridPresentation?.toSourceCell(row, col) ?? { row, col };
+                          toggleGuestPick(sourceCell.row, sourceCell.col, selected);
+                        }
+                      : undefined
+                  }
+                  busyCellKeys={gridBusyCellKeys}
+                  revealMarkers={shouldRevealOutcome}
+                  revealWinner={shouldRevealOutcome}
                 />
                 {guestOwner && !isGuestLocked ? (
                   <PickControlsCard
@@ -698,6 +741,7 @@ function TestingSuiteCard(props: {
       | 'seed_demo'
       | 'fill_blanks_balanced'
   ) => void;
+  testModeEnabled: boolean;
   homeTeam: string;
   awayTeam: string;
   onSimulateHomeScore: () => void;
@@ -708,12 +752,13 @@ function TestingSuiteCard(props: {
   const actions: Array<{
     id: 'clear_picks' | 'clear_winners' | 'clear_all' | 'seed_demo' | 'fill_blanks_balanced';
     label: string;
+    requiresTestMode: boolean;
   }> = [
-    { id: 'clear_picks', label: 'Clear Picks' },
-    { id: 'clear_winners', label: 'Clear Winners' },
-    { id: 'clear_all', label: 'Full Reset' },
-    { id: 'fill_blanks_balanced', label: 'Fill Blank Squares' },
-    { id: 'seed_demo', label: 'Seed Demo Board' },
+    { id: 'clear_picks', label: 'Clear Picks', requiresTestMode: true },
+    { id: 'clear_winners', label: 'Clear Winners', requiresTestMode: true },
+    { id: 'clear_all', label: 'Full Reset', requiresTestMode: true },
+    { id: 'fill_blanks_balanced', label: 'Fill Blank Squares', requiresTestMode: false },
+    { id: 'seed_demo', label: 'Seed Demo Board', requiresTestMode: true },
   ];
 
   return (
@@ -726,7 +771,14 @@ function TestingSuiteCard(props: {
             type="button"
             className={styles.testingBtn}
             onClick={() => props.onRunAction(action.id)}
-            disabled={Boolean(props.busyAction)}
+            disabled={
+              Boolean(props.busyAction) || (action.requiresTestMode && !props.testModeEnabled)
+            }
+            title={
+              action.requiresTestMode && !props.testModeEnabled
+                ? 'Enable Test Mode to run this action'
+                : undefined
+            }
           >
             {props.busyAction === action.id ? 'Working…' : action.label}
           </button>
@@ -765,6 +817,98 @@ function TestingSuiteCard(props: {
       {props.status ? <div className={styles.testingStatus}>{props.status}</div> : null}
     </div>
   );
+}
+
+type GridPresentation = {
+  board: BoardConfig;
+  winningCell: WinningCell | null;
+  toSourceCell: (row: number, col: number) => { row: number; col: number };
+  toDisplayCell: (row: number, col: number) => { row: number; col: number };
+};
+
+function buildDefaultGridPresentation(board: BoardConfig, winningCell: WinningCell | null): GridPresentation {
+  return {
+    board,
+    winningCell,
+    toSourceCell: (row, col) => ({ row, col }),
+    toDisplayCell: (row, col) => ({ row, col }),
+  };
+}
+
+function buildStartedGameGridPresentation(
+  board: BoardConfig,
+  winningCell: WinningCell | null
+): GridPresentation {
+  const rowOrder = buildSortedIndexOrder(board.rowMarkers);
+  const colOrder = buildSortedIndexOrder(board.columnMarkers);
+
+  const rowDisplayBySource = Array.from({ length: board.rowMarkers.length }, () => -1);
+  const colDisplayBySource = Array.from({ length: board.columnMarkers.length }, () => -1);
+  rowOrder.forEach((sourceRowIndex, displayRowIndex) => {
+    rowDisplayBySource[sourceRowIndex] = displayRowIndex;
+  });
+  colOrder.forEach((sourceColIndex, displayColIndex) => {
+    colDisplayBySource[sourceColIndex] = displayColIndex;
+  });
+
+  const orderedAssignments = rowOrder.map((sourceRowIndex) =>
+    colOrder.map((sourceColIndex) => board.assignments[sourceRowIndex]?.[sourceColIndex] ?? '')
+  );
+
+  const orderedWinningCell =
+    winningCell &&
+    winningCell.row >= 0 &&
+    winningCell.row < rowDisplayBySource.length &&
+    winningCell.col >= 0 &&
+    winningCell.col < colDisplayBySource.length
+      ? {
+          ...winningCell,
+          row: rowDisplayBySource[winningCell.row],
+          col: colDisplayBySource[winningCell.col],
+        }
+      : null;
+
+  return {
+    board: {
+      ...board,
+      rowMarkers: rowOrder.map((sourceRowIndex) => board.rowMarkers[sourceRowIndex]),
+      columnMarkers: colOrder.map((sourceColIndex) => board.columnMarkers[sourceColIndex]),
+      assignments: orderedAssignments,
+    },
+    winningCell: orderedWinningCell,
+    toSourceCell: (displayRow, displayCol) => ({
+      row: rowOrder[displayRow] ?? displayRow,
+      col: colOrder[displayCol] ?? displayCol,
+    }),
+    toDisplayCell: (sourceRow, sourceCol) => ({
+      row: rowDisplayBySource[sourceRow] ?? sourceRow,
+      col: colDisplayBySource[sourceCol] ?? sourceCol,
+    }),
+  };
+}
+
+function buildSortedIndexOrder(markers: number[]) {
+  return markers
+    .map((marker, index) => ({ marker, index }))
+    .sort((a, b) => (a.marker === b.marker ? a.index - b.index : a.marker - b.marker))
+    .map(({ index }) => index);
+}
+
+function getAdminActionConfirmationMessage(
+  action: 'clear_picks' | 'clear_winners' | 'clear_all' | 'seed_demo' | 'fill_blanks_balanced'
+) {
+  switch (action) {
+    case 'clear_picks':
+      return 'Clear all board picks? This cannot be undone.';
+    case 'clear_winners':
+      return 'Clear all quarter winners? This cannot be undone.';
+    case 'clear_all':
+      return 'Run full reset? This clears picks, winners, and owners, and reshuffles markers.';
+    case 'seed_demo':
+      return 'Seed demo board data now? This will replace current owners and picks.';
+    case 'fill_blanks_balanced':
+      return 'Fill all blank squares using balanced assignment?';
+  }
 }
 
 function buildQuarterPreviewWinners(

@@ -16,7 +16,10 @@ export function Sidebar({
     <aside className={styles.sidebar}>
       <div className={`${styles.card} ${styles.sidebarCard}`}>
         <div className={styles.kicker}>Current winner</div>
-        <div className={winningOwner ? styles.currentWinner : `${styles.currentWinner} ${styles.winnerUnknown}`}>
+        <div
+          className={winningOwner ? styles.currentWinner : `${styles.currentWinner} ${styles.winnerUnknown}`}
+          style={buildCurrentWinnerStyle(winningOwner)}
+        >
           {winningOwner ? `${winningOwner.initials} · ${winningOwner.displayName}` : 'No winner yet'}
         </div>
       </div>
@@ -49,6 +52,17 @@ export function Sidebar({
       </div>
     </aside>
   );
+}
+
+function buildCurrentWinnerStyle(winningOwner: BoardOwner | null) {
+  if (!winningOwner) return undefined;
+
+  return {
+    borderTop: `1px solid ${withAlpha(winningOwner.bgColor, 0.55)}`,
+    background: `linear-gradient(90deg, ${withAlpha(winningOwner.bgColor, 0.16)}, transparent 72%)`,
+    borderRadius: '8px',
+    padding: '8px',
+  };
 }
 
 function buildQuarterRowStyle(winner: QuarterWinner, owners: BoardOwner[]) {

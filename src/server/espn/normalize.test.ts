@@ -37,6 +37,54 @@ describe('normalizeEspnEvent', () => {
     expect(snapshot.homeScore).toBe(0);
     expect(snapshot.awayScore).toBe(0);
   });
+
+  it('treats halftime as live so markers are revealed', () => {
+    const snapshot = normalizeEspnEvent(
+      {
+        id: '123',
+        competitions: [
+          {
+            competitors: [
+              { homeAway: 'home', score: '14', team: { shortDisplayName: 'Chiefs' } },
+              { homeAway: 'away', score: '10', team: { shortDisplayName: 'Eagles' } },
+            ],
+            status: {
+              period: 2,
+              displayClock: '0:00',
+              type: { state: 'halftime', completed: false },
+            },
+          },
+        ],
+      },
+      'fallback'
+    );
+
+    expect(snapshot.status).toBe('live');
+  });
+
+  it('treats advanced score/period signals as live even if state is pre', () => {
+    const snapshot = normalizeEspnEvent(
+      {
+        id: '123',
+        competitions: [
+          {
+            competitors: [
+              { homeAway: 'home', score: '7', team: { shortDisplayName: 'Chiefs' } },
+              { homeAway: 'away', score: '0', team: { shortDisplayName: 'Eagles' } },
+            ],
+            status: {
+              period: 1,
+              displayClock: '12:41',
+              type: { state: 'pre', completed: false },
+            },
+          },
+        ],
+      },
+      'fallback'
+    );
+
+    expect(snapshot.status).toBe('live');
+  });
 });
 
 describe('buildFallbackSnapshot', () => {

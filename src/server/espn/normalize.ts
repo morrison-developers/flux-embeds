@@ -36,12 +36,36 @@ function toNumber(value: string | undefined): number {
 }
 
 function resolveStatus(event: EspnEvent, competition?: EspnCompetition): GameSnapshot['status'] {
-  const state = competition?.status?.type?.state ?? event.status?.type?.state ?? 'pre';
+  const state = (competition?.status?.type?.state ?? event.status?.type?.state ?? 'pre').toLowerCase();
   const completed =
     competition?.status?.type?.completed ?? event.status?.type?.completed ?? false;
+  const period = competition?.status?.period ?? 1;
+  const clock = competition?.status?.displayClock ?? '15:00';
+  const homeScore = toNumber(
+    competition?.competitors?.find((team) => team.homeAway === 'home')?.score
+  );
+  const awayScore = toNumber(
+    competition?.competitors?.find((team) => team.homeAway === 'away')?.score
+  );
 
   if (completed) return 'final';
-  if (state === 'in' || state === 'in_progress') return 'live';
+  if (state === 'post') return 'final';
+
+  const explicitlyLiveStates = new Set([
+    'in',
+    'in_progress',
+    'halftime',
+    'end_period',
+    'delayed',
+    'suspended',
+  ]);
+  if (explicitlyLiveStates.has(state)) return 'live';
+
+  // Fallback: if game state labeling is odd but gameplay has advanced, treat as live.
+  const hasStartedBySignals =
+    period > 1 || homeScore > 0 || awayScore > 0 || (period === 1 && clock !== '15:00');
+  if (hasStartedBySignals) return 'live';
+
   return 'pre';
 }
 

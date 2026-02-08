@@ -429,7 +429,8 @@ function SuperbOwlPageContent() {
                 ) : null}
                 <OwnerLegend owners={data.board.owners} />
                 <div className={styles.meta}>
-                  liveStatus: {data.liveStatus} · board: {data.board.id}
+                  liveStatus: {data.liveStatus} · board: {data.board.id} · auth: {auth.status}
+                  {auth.guestName ? ` (${auth.guestName})` : ''}
                 </div>
                 {isAdminView ? (
                   <ApiStatusCard

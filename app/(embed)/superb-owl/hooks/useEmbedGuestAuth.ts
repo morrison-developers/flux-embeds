@@ -170,7 +170,7 @@ export function useEmbedGuestAuth(params: {
 
     setState((prev) => ({
       ...prev,
-      status: 'requesting',
+      status: prev.guestName ? 'authenticated' : 'requesting',
       error: null,
       parentOrigin: expectedOrigin,
     }));
@@ -229,30 +229,46 @@ export function useEmbedGuestAuth(params: {
 
       if (payload.authenticated !== true) {
         setState((prev) => ({
-          ...prev,
-          status: 'unauthenticated',
-          parentOrigin: resolvedParentOriginRef.current,
-          guestId: null,
-          guestName: null,
-          role: null,
-          features: [],
-          expiresAt: null,
-          error: null,
+          ...(prev.guestName
+            ? {
+                ...prev,
+                parentOrigin: resolvedParentOriginRef.current,
+                error: 'Parent auth refresh returned unauthenticated. Retaining current session.',
+              }
+            : {
+                ...prev,
+                status: 'unauthenticated',
+                parentOrigin: resolvedParentOriginRef.current,
+                guestId: null,
+                guestName: null,
+                role: null,
+                features: [],
+                expiresAt: null,
+                error: null,
+              }),
         }));
         return;
       }
 
       if (isExpired(payload.exp)) {
         setState((prev) => ({
-          ...prev,
-          status: 'error',
-          parentOrigin: resolvedParentOriginRef.current,
-          error: 'Auth session is expired.',
-          guestId: null,
-          guestName: null,
-          role: null,
-          features: [],
-          expiresAt: null,
+          ...(prev.guestName
+            ? {
+                ...prev,
+                parentOrigin: resolvedParentOriginRef.current,
+                error: 'Parent auth refresh is expired. Retaining current session.',
+              }
+            : {
+                ...prev,
+                status: 'error',
+                parentOrigin: resolvedParentOriginRef.current,
+                error: 'Auth session is expired.',
+                guestId: null,
+                guestName: null,
+                role: null,
+                features: [],
+                expiresAt: null,
+              }),
         }));
         return;
       }
@@ -275,9 +291,18 @@ export function useEmbedGuestAuth(params: {
     const timeout = window.setTimeout(() => {
       setState((prev) => {
         if (prev.status !== 'requesting') return prev;
-        return prev;
+        if (prev.guestName && prev.status === 'authenticated') {
+          return {
+            ...prev,
+            error: 'Auth refresh timed out. Retaining current session.',
+          };
+        }
+        return {
+          ...prev,
+          status: 'unauthenticated',
+          error: 'No auth response from parent.',
+        };
       });
-      fallbackToUrlGuest(setState, expectedOrigin);
     }, 5000);
 
     const refreshTimer = window.setInterval(() => {

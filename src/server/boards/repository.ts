@@ -17,6 +17,16 @@ type BoardWithRelations = Prisma.BoardGetPayload<{
   };
 }>;
 
+const SUPER_ADMIN_NAME = 'admin adminson';
+
+function normalizeNameKey(name: string) {
+  return name.trim().replace(/\s+/g, ' ').toLowerCase();
+}
+
+function isSuperAdminOwnerName(name: string) {
+  return normalizeNameKey(name) === SUPER_ADMIN_NAME;
+}
+
 function toNumberArray(value: unknown, fallback: number[]): number[] {
   if (!Array.isArray(value)) return fallback;
   if (value.length !== 10) return fallback;
@@ -69,7 +79,10 @@ function toBoardConfig(record: BoardWithRelations): BoardConfig {
     rowMarkers: toNumberArray(record.rowMarkers, defaults.rowMarkers),
     assignments: toMatrix(record.assignments),
     themeDefaults,
-    owners: record.owners.sort((a, b) => a.sortOrder - b.sortOrder).map(toOwner),
+    owners: record.owners
+      .filter((owner) => !isSuperAdminOwnerName(owner.displayName))
+      .sort((a, b) => a.sortOrder - b.sortOrder)
+      .map(toOwner),
   };
 }
 
@@ -278,7 +291,7 @@ const DEMO_OWNERS: Array<{
   bgColor: string;
   textColor: string;
 }> = [
-  { initials: 'AA', displayName: 'Admin Adminson', bgColor: '#1d4ed8', textColor: '#ffffff' },
+  { initials: 'AB', displayName: 'Alex Brown', bgColor: '#1d4ed8', textColor: '#ffffff' },
   { initials: 'NB', displayName: 'Nicoletta Berry', bgColor: '#0f766e', textColor: '#ffffff' },
   { initials: 'RJ', displayName: 'Ryan James', bgColor: '#9333ea', textColor: '#ffffff' },
   { initials: 'KT', displayName: 'Kim Taylor', bgColor: '#ea580c', textColor: '#ffffff' },
@@ -297,6 +310,9 @@ export async function claimGuestOwner(params: {
 }) {
   const board = await getOrCreateBoard(params.boardId);
   const guestName = normalizeOwnerName(params.guestName);
+  if (isSuperAdminOwnerName(guestName)) {
+    throw new Error('ADMIN_OWNER_FORBIDDEN');
+  }
   const requestedInitials = safeInitials(params.initials, guestName);
 
   const existingByName = board.owners.find(

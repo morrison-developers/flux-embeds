@@ -46,6 +46,9 @@ export async function POST(
       if (message === 'OWNER_INITIALS_TAKEN') {
         return apiError(409, 'Initials already taken.', 'INITIALS_TAKEN');
       }
+      if (message === 'ADMIN_OWNER_FORBIDDEN') {
+        return apiError(403, 'Admin user cannot claim an owner slot.', 'FORBIDDEN');
+      }
       throw error;
     }
   } catch (error) {

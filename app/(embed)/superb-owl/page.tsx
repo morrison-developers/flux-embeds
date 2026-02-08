@@ -107,8 +107,9 @@ function SuperbOwlPageContent() {
       ? displayBoard.assignments.flat().filter((cell) => cell.trim() === guestOwner.initials).length
       : 0;
   const isGuestLocked = Boolean(guestOwner?.lockedAt);
+  const isSuperAdminGuest = (auth.guestName ?? '').trim().toLowerCase() === 'admin adminson';
   const shouldShowOnboarding =
-    auth.status === 'authenticated' && Boolean(auth.guestName) && !guestOwner;
+    auth.status === 'authenticated' && Boolean(auth.guestName) && !guestOwner && !isSuperAdminGuest;
   const autoInitials = deriveInitials(auth.guestName ?? '');
   const claimTextColor = getReadableTextColor(claimColor);
   const effectiveQuarterWinners = useMemo(() => {

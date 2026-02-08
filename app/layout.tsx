@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 
@@ -13,6 +13,9 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL(
+    process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000"
+  ),
   title: {
     default: "flux-embeds",
     template: "%s · flux-embeds",
@@ -21,7 +24,6 @@ export const metadata: Metadata = {
     "A host for small, iframe-safe UI surfaces used across Flux.",
 
   applicationName: "flux-embeds",
-  themeColor: "#161d21",
 
   openGraph: {
     title: "flux-embeds",
@@ -45,6 +47,10 @@ export const metadata: Metadata = {
       "A host for small, iframe-safe UI surfaces used across Flux.",
     images: ["/wordmark.webp"],
   },
+};
+
+export const viewport: Viewport = {
+  themeColor: "#161d21",
 };
 
 export default function RootLayout({

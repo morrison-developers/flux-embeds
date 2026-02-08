@@ -3,6 +3,7 @@ export default function DevPage() {
     { name: 'Contact', path: '/contact?embedded=true&dense=true' },
     { name: 'Mor Dev Particles', path: '/mor-dev-particles?embedded=true&dense=true' },
   { name: 'Download Button', path: '/download-btn?embedded=true&dense=true' },
+  { name: 'Superb Owl', path: '/superb-owl?board=default&embedded=true&dense=true' },
 ];
 
   return (

@@ -13,7 +13,7 @@ const nextConfig: NextConfig = {
             // Allow embedding by self + localhost for dev + your domains.
             // Adjust https://*.host.com to your actual parent domains.
             value:
-              "frame-ancestors 'self' http://localhost:3000 http://localhost:5173 https://*.host.com https://poweredbybackstage.com https://www.poweredbybackstage.com https://morrisondevelopers.com https://www.morrisondevelopers.com;",
+              "frame-ancestors 'self' http://localhost:3000 http://localhost:5173 https://*.host.com https://poweredbybackstage.com https://www.poweredbybackstage.com https://morrisondevelopers.com https://www.morrisondevelopers.com https://embeds.morrisondevelopers.com https://*.morrisondevelopers.com;",
           },
           // Override Next/Vercel's default X-Frame-Options=SAMEORIGIN.
           // We rely on CSP `frame-ancestors` as the real allowlist for embedding.

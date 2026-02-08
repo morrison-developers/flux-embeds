@@ -21,6 +21,35 @@ function getFirstDefinedEnvWithName(names: string[]) {
   return undefined;
 }
 
+function normalizePrismaDatabaseUrl(rawUrl: string) {
+  try {
+    const url = new URL(rawUrl);
+    const isSupabasePooler = url.hostname.includes('pooler.supabase.com') || url.port === '6543';
+
+    if (!isSupabasePooler) {
+      return { value: rawUrl, normalized: false };
+    }
+
+    let normalized = false;
+    if (!url.searchParams.has('pgbouncer')) {
+      url.searchParams.set('pgbouncer', 'true');
+      normalized = true;
+    }
+    if (!url.searchParams.has('connection_limit')) {
+      url.searchParams.set('connection_limit', '1');
+      normalized = true;
+    }
+    if (!url.searchParams.has('sslmode')) {
+      url.searchParams.set('sslmode', 'require');
+      normalized = true;
+    }
+
+    return { value: url.toString(), normalized };
+  } catch {
+    return { value: rawUrl, normalized: false };
+  }
+}
+
 export function resolveDatabaseEnv() {
   const databaseUrlSource = getFirstDefinedEnvWithName([
     'DATABASE_URL',
@@ -29,6 +58,13 @@ export function resolveDatabaseEnv() {
   ]);
   if (databaseUrlSource?.value && !process.env.DATABASE_URL) {
     process.env.DATABASE_URL = databaseUrlSource.value;
+  }
+
+  let databaseUrlNormalized = false;
+  if (process.env.DATABASE_URL) {
+    const normalizedDatabaseUrl = normalizePrismaDatabaseUrl(process.env.DATABASE_URL);
+    process.env.DATABASE_URL = normalizedDatabaseUrl.value;
+    databaseUrlNormalized = normalizedDatabaseUrl.normalized;
   }
 
   const directUrlSource = getFirstDefinedEnvWithName([
@@ -45,6 +81,7 @@ export function resolveDatabaseEnv() {
     directUrl: process.env.DIRECT_URL,
     databaseUrlSource: databaseUrlSource?.name ?? null,
     directUrlSource: directUrlSource?.name ?? null,
+    databaseUrlNormalized,
   };
 }
 
@@ -67,7 +104,7 @@ export function logResolvedDatabaseEnv() {
 
   const resolved = resolveDatabaseEnv();
   console.info(
-    `[db] Resolved DB env vars: DATABASE_URL <- ${resolved.databaseUrlSource ?? 'missing'}, DIRECT_URL <- ${resolved.directUrlSource ?? 'missing'}`
+    `[db] Resolved DB env vars: DATABASE_URL <- ${resolved.databaseUrlSource ?? 'missing'}${resolved.databaseUrlNormalized ? ' (normalized for pgbouncer)' : ''}, DIRECT_URL <- ${resolved.directUrlSource ?? 'missing'}`
   );
 }
 

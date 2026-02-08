@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type Dispatch, type SetStateAction } from 'react';
 
 type GuestRole = 'viewer' | 'picker' | 'captain' | 'admin';
 
@@ -94,6 +94,45 @@ function normalizeAuthResultMessage(raw: unknown): AuthResultMessage | null {
   };
 }
 
+function getGuestNameFromUrl(): string | null {
+  if (typeof window === 'undefined') return null;
+  try {
+    const params = new URLSearchParams(window.location.search);
+    const raw = (params.get('guestName') ?? params.get('guest') ?? '').trim();
+    if (!raw) return null;
+    return raw.slice(0, 64);
+  } catch {
+    return null;
+  }
+}
+
+function fallbackToUrlGuest(
+  setState: Dispatch<SetStateAction<GuestAuthState>>,
+  expectedOrigin: string | null
+) {
+  const fallbackGuest = getGuestNameFromUrl();
+  if (!fallbackGuest) {
+    setState((prev) => ({
+      ...prev,
+      status: 'unauthenticated',
+      error: 'No auth response from parent.',
+    }));
+    return;
+  }
+
+  setState((prev) => ({
+    ...prev,
+    status: 'authenticated',
+    parentOrigin: expectedOrigin,
+    guestId: `url:${fallbackGuest.toLowerCase()}`,
+    guestName: fallbackGuest,
+    role: 'picker',
+    features: ['url-guest-fallback'],
+    expiresAt: null,
+    error: null,
+  }));
+}
+
 export function useEmbedGuestAuth(params: {
   boardId: string;
   parentOrigin?: string;
@@ -122,11 +161,7 @@ export function useEmbedGuestAuth(params: {
     }
 
     if (typeof window === 'undefined' || window.parent === window) {
-      setState((prev) => ({
-        ...prev,
-        status: 'unauthenticated',
-        error: 'Embed is not running in an iframe parent context.',
-      }));
+      fallbackToUrlGuest(setState, expectedOrigin);
       return;
     }
 
@@ -240,12 +275,9 @@ export function useEmbedGuestAuth(params: {
     const timeout = window.setTimeout(() => {
       setState((prev) => {
         if (prev.status !== 'requesting') return prev;
-        return {
-          ...prev,
-          status: 'unauthenticated',
-          error: 'No auth response from parent.',
-        };
+        return prev;
       });
+      fallbackToUrlGuest(setState, expectedOrigin);
     }, 5000);
 
     const refreshTimer = window.setInterval(() => {

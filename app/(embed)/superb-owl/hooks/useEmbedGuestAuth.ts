@@ -291,7 +291,7 @@ export function useEmbedGuestAuth(params: {
     const timeout = window.setTimeout(() => {
       setState((prev) => {
         if (prev.status !== 'requesting') return prev;
-        if (prev.guestName && prev.status === 'authenticated') {
+        if (prev.guestName) {
           return {
             ...prev,
             error: 'Auth refresh timed out. Retaining current session.',

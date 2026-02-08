@@ -43,6 +43,9 @@ export async function POST(
     if (error instanceof ZodError) {
       return apiError(400, 'Invalid request payload.', 'BAD_REQUEST');
     }
+    if (error instanceof Error && error.message === 'NO_OWNERS') {
+      return apiError(400, 'No owners found to distribute picks.', 'NO_OWNERS');
+    }
     if (isEnvConfigError(error)) {
       return apiError(500, error.message, error.code);
     }

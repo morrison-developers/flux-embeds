@@ -217,7 +217,8 @@ function SuperbOwlPageContent() {
     }
   }
 
-  async function runAdminAction(action: 'clear_picks' | 'clear_winners' | 'clear_all' | 'seed_demo') {
+  async function runAdminAction(action: 'clear_picks' | 'clear_winners' | 'clear_all' | 'seed_demo' | 'distribute_empty'
+  ) {
     if (!auth.guestName || !boardId || adminBusyAction) return;
     setAdminStatus(null);
     setAdminBusyAction(action);
@@ -683,7 +684,9 @@ function getReadableTextColor(hex: string) {
 function TestingSuiteCard(props: {
   busyAction: string | null;
   status: string | null;
-  onRunAction: (action: 'clear_picks' | 'clear_winners' | 'clear_all' | 'seed_demo') => void;
+  onRunAction: (
+    action: 'clear_picks' | 'clear_winners' | 'clear_all' | 'seed_demo' | 'distribute_empty'
+  ) => void;
   homeTeam: string;
   awayTeam: string;
   onSimulateHomeScore: () => void;
@@ -692,13 +695,14 @@ function TestingSuiteCard(props: {
   onCycleQuarterPreview: () => void;
 }) {
   const actions: Array<{
-    id: 'clear_picks' | 'clear_winners' | 'clear_all' | 'seed_demo';
+    id: 'clear_picks' | 'clear_winners' | 'clear_all' | 'seed_demo' | 'distribute_empty';
     label: string;
   }> = [
     { id: 'clear_picks', label: 'Clear Picks' },
     { id: 'clear_winners', label: 'Clear Winners' },
     { id: 'clear_all', label: 'Full Reset' },
     { id: 'seed_demo', label: 'Seed Demo Board' },
+    { id: 'distribute_empty', label: 'Distribute Empty Boxes' },
   ];
 
   return (

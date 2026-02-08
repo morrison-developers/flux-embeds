@@ -512,7 +512,7 @@ function shuffledMarkers() {
 
 export async function runGuestAdminAction(params: {
   boardId: string;
-  action: 'clear_picks' | 'clear_winners' | 'clear_all' | 'seed_demo';
+  action: 'clear_picks' | 'clear_winners' | 'clear_all' | 'seed_demo' | 'distribute_empty';
 }) {
   await getOrCreateBoard(params.boardId);
 
@@ -567,6 +567,73 @@ export async function runGuestAdminAction(params: {
             columnMarkers: shuffledMarkers(),
           },
         });
+      });
+      return { action: params.action, ok: true };
+    }
+    case 'distribute_empty': {
+      const record = await prisma.board.findUnique({
+        where: { id: params.boardId },
+        include: { owners: true },
+      });
+      if (!record) {
+        throw new Error('BOARD_NOT_FOUND');
+      }
+
+      const owners = record.owners
+        .filter((owner) => !isSuperAdminOwnerName(owner.displayName))
+        .sort((a, b) => a.sortOrder - b.sortOrder);
+      if (owners.length === 0) {
+        throw new Error('NO_OWNERS');
+      }
+
+      const matrix = toMatrix(record.assignments);
+      const ownerIndexByInitials = new Map<string, number>();
+      owners.forEach((owner, index) => {
+        ownerIndexByInitials.set(owner.initials, index);
+      });
+
+      const counts = Array.from({ length: owners.length }, () => 0);
+      for (const row of matrix) {
+        for (const cell of row) {
+          const initials = cell.trim();
+          if (!initials) continue;
+          const ownerIndex = ownerIndexByInitials.get(initials);
+          if (ownerIndex !== undefined) {
+            counts[ownerIndex] += 1;
+          }
+        }
+      }
+
+      const emptyCells: Array<{ row: number; col: number }> = [];
+      for (let row = 0; row < 10; row += 1) {
+        for (let col = 0; col < 10; col += 1) {
+          if (!matrix[row][col].trim()) {
+            emptyCells.push({ row, col });
+          }
+        }
+      }
+
+      if (emptyCells.length === 0) {
+        return { action: params.action, ok: true };
+      }
+
+      for (const cell of emptyCells) {
+        let bestIndex = 0;
+        let bestCount = counts[0];
+        for (let i = 1; i < counts.length; i += 1) {
+          const current = counts[i];
+          if (current < bestCount) {
+            bestCount = current;
+            bestIndex = i;
+          }
+        }
+        matrix[cell.row][cell.col] = owners[bestIndex].initials;
+        counts[bestIndex] += 1;
+      }
+
+      await prisma.board.update({
+        where: { id: params.boardId },
+        data: { assignments: matrix },
       });
       return { action: params.action, ok: true };
     }

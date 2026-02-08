@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState, type CSSProperties } from 'react';
+import { Suspense, useEffect, useMemo, useState, type CSSProperties } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { EmbedShell } from '../_shared/EmbedShell';
 import { Grid } from './components/Grid';
@@ -34,6 +34,14 @@ const OWNER_COLOR_CHOICES = [
 const MAX_PICKS_PER_GUEST = 16;
 
 export default function SuperbOwlPage() {
+  return (
+    <Suspense fallback={null}>
+      <SuperbOwlPageContent />
+    </Suspense>
+  );
+}
+
+function SuperbOwlPageContent() {
   const searchParams = useSearchParams();
 
   const parsed = useMemo(() => parseSuperbOwlQuery(searchParams), [searchParams]);

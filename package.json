@@ -8,8 +8,8 @@
     "start": "next start",
     "lint": "eslint",
     "gen:feature": "node scripts/gen-feature.mjs",
-    "prisma:generate": "prisma generate",
-    "prisma:migrate": "prisma migrate deploy",
+    "prisma:generate": "DATABASE_URL=${DATABASE_URL:-${POSTGRES_URL:-$POSTGRES_PRISMA_URL}} DIRECT_URL=${DIRECT_URL:-${POSTGRES_URL_NON_POOLING:-${POSTGRES_URL:-$POSTGRES_PRISMA_URL}}} prisma generate",
+    "prisma:migrate": "DATABASE_URL=${DATABASE_URL:-${POSTGRES_URL:-$POSTGRES_PRISMA_URL}} DIRECT_URL=${DIRECT_URL:-${POSTGRES_URL_NON_POOLING:-${POSTGRES_URL:-$POSTGRES_PRISMA_URL}}} prisma migrate deploy",
     "test": "vitest run",
     "test:watch": "vitest"
   },

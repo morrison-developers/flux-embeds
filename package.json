@@ -3,9 +3,9 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
+    "dev": "next dev -p 4200",
     "build": "next build",
-    "start": "next start",
+    "start": "next start -p 4200",
     "lint": "eslint",
     "gen:feature": "node scripts/gen-feature.mjs",
     "prisma:generate": "DATABASE_URL=${DATABASE_URL:-${POSTGRES_URL:-$POSTGRES_PRISMA_URL}} DIRECT_URL=${DIRECT_URL:-${POSTGRES_URL_NON_POOLING:-${POSTGRES_URL:-$POSTGRES_PRISMA_URL}}} prisma generate",

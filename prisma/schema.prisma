@@ -3,24 +3,24 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
   directUrl = env("DIRECT_URL")
 }
 
 model Board {
-  id            String          @id
-  name          String
-  defaultGameId String?
-  topTeamLabel  String
-  sideTeamLabel String
-  columnMarkers Json
-  rowMarkers    Json
-  assignments   Json
-  themeDefaults Json
-  createdAt     DateTime        @default(now())
-  updatedAt     DateTime        @updatedAt
-  owners        BoardOwner[]
+  id             String          @id
+  name           String
+  defaultGameId  String?
+  topTeamLabel   String
+  sideTeamLabel  String
+  columnMarkers  Json
+  rowMarkers     Json
+  assignments    Json
+  themeDefaults  Json
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  owners         BoardOwner[]
   quarterWinners QuarterWinner[]
 }
 
@@ -32,9 +32,9 @@ model BoardOwner {
   bgColor     String
   textColor   String
   sortOrder   Int
-  lockedAt    DateTime?
   createdAt   DateTime        @default(now())
   updatedAt   DateTime        @updatedAt
+  lockedAt    DateTime?
   board       Board           @relation(fields: [boardId], references: [id], onDelete: Cascade)
   quarterWins QuarterWinner[]
 
@@ -43,18 +43,32 @@ model BoardOwner {
 }
 
 model QuarterWinner {
-  id                 String     @id @default(cuid())
+  id                 String      @id @default(cuid())
   boardId            String
   quarter            Int
   ownerId            String?
   homeScore          Int
   awayScore          Int
   gamePeriodRecorded Int
-  createdAt          DateTime   @default(now())
-  updatedAt          DateTime   @updatedAt
-  board              Board      @relation(fields: [boardId], references: [id], onDelete: Cascade)
+  createdAt          DateTime    @default(now())
+  updatedAt          DateTime    @updatedAt
+  board              Board       @relation(fields: [boardId], references: [id], onDelete: Cascade)
   owner              BoardOwner? @relation(fields: [ownerId], references: [id], onDelete: SetNull)
 
   @@unique([boardId, quarter])
   @@index([boardId])
+}
+
+model ShavonLloydContactSubmission {
+  id        String   @id @default(cuid())
+  name      String
+  email     String
+  company   String?
+  message   String
+  ip        String
+  userAgent String?
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([email])
 }

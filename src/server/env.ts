@@ -52,9 +52,9 @@ function normalizePrismaDatabaseUrl(rawUrl: string) {
 
 export function resolveDatabaseEnv() {
   const databaseUrlSource = getFirstDefinedEnvWithName([
-    'DATABASE_URL',
-    'POSTGRES_URL',
     'POSTGRES_PRISMA_URL',
+    'POSTGRES_URL',
+    'DATABASE_URL',
   ]);
   if (databaseUrlSource?.value && !process.env.DATABASE_URL) {
     process.env.DATABASE_URL = databaseUrlSource.value;
@@ -68,8 +68,8 @@ export function resolveDatabaseEnv() {
   }
 
   const directUrlSource = getFirstDefinedEnvWithName([
-    'DIRECT_URL',
     'POSTGRES_URL_NON_POOLING',
+    'DIRECT_URL',
     'POSTGRES_URL',
   ]);
   if (directUrlSource?.value && !process.env.DIRECT_URL) {

@@ -1,0 +1,429 @@
+.root {
+  width: 100%;
+  margin: 0;
+  padding: 6px;
+  background: linear-gradient(180deg, #e8eff8 0%, #dfe9f6 100%);
+  border-radius: 14px;
+}
+
+.frame {
+  background: #f8fafd;
+  border: 1px solid #c9d7e8;
+  border-radius: 14px;
+  padding: 14px;
+  box-shadow: 0 2px 10px rgba(38, 62, 94, 0.06);
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.7fr) minmax(0, 1fr);
+  gap: 18px;
+}
+
+.leftPane {
+  border-radius: 10px;
+  background: #fcfdff;
+  border: 1px solid #e2e9f2;
+  overflow: hidden;
+}
+
+.calendarHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 16px 16px 10px;
+}
+
+.monthTitle {
+  margin: 0;
+  color: #13191f;
+  font-size: clamp(1.8rem, 3.1vw, 2.35rem);
+  line-height: 1.1;
+  font-weight: 650;
+  letter-spacing: 0.01em;
+  font-family: 'Iowan Old Style', 'Palatino Linotype', Palatino, 'Times New Roman', serif;
+}
+
+.navButtons {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.navButton {
+  display: inline-grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border: 1px solid #dde5ef;
+  border-radius: 10px;
+  background: #fefefe;
+  color: #1f2a37;
+  cursor: pointer;
+  transition:
+    background-color 120ms ease,
+    border-color 120ms ease,
+    transform 120ms ease;
+}
+
+.navIcon {
+  width: 15px;
+  height: 15px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.navButton:hover {
+  background: #f6f9fe;
+  border-color: #cfdae8;
+}
+
+.navButton:active {
+  transform: translateY(1px);
+}
+
+.navButton:focus-visible {
+  outline: 2px solid #4f74a6;
+  outline-offset: 2px;
+}
+
+.weekdays {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  border-top: 1px solid #e3eaf3;
+  border-bottom: 1px solid #e3eaf3;
+  background: #f8fafd;
+}
+
+.weekdayLabel {
+  padding: 12px 4px;
+  text-align: center;
+  font-family:
+    'IBM Plex Sans', 'Avenir Next', 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+  font-size: 1.03rem;
+  font-weight: 600;
+  color: #141a22;
+}
+
+.dayGrid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+}
+
+.dayCell {
+  min-height: 96px;
+  position: relative;
+  border: 0;
+  border-right: 1px solid #e6edf5;
+  border-bottom: 1px solid #e6edf5;
+  background: #ffffff;
+  color: #1a2128;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 10px 6px;
+  transition: background-color 140ms ease;
+}
+
+.dayCell:nth-child(7n) {
+  border-right: 0;
+}
+
+.dayCell:hover {
+  background: #f5f9ff;
+}
+
+.dayCell:focus-visible {
+  outline: 2px solid #4f74a6;
+  outline-offset: -2px;
+}
+
+.dayCellOutside {
+  background: #f7f9fc;
+  color: #a2adbb;
+}
+
+.dayCellToday {
+  box-shadow: inset 0 0 0 1px rgba(79, 116, 166, 0.42);
+}
+
+.dayCellSelected {
+  background: #dce8f6;
+  color: #1d2c41;
+}
+
+.dayNumber {
+  font-family: 'IBM Plex Sans', 'Avenir Next', 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+  font-size: 1.7rem;
+  line-height: 1;
+}
+
+.eventIconBadge {
+  position: absolute;
+  top: 7px;
+  right: 7px;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  color: #2a4872;
+  font-family: 'IBM Plex Sans', 'Avenir Next', 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.eventIcon {
+  width: 12px;
+  height: 12px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.7;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.eventIconCount {
+  min-width: 10px;
+  text-align: left;
+  line-height: 1;
+}
+
+.dayCellSelected .eventIconBadge {
+  color: #1d3c66;
+}
+
+.dayCellOutside .eventIconBadge {
+  color: #8f99a8;
+}
+
+.rightPane {
+  background: #fdfefe;
+  border: 1px solid #e8eef6;
+  border-radius: 10px;
+  padding: 12px 12px 14px;
+  max-height: 668px;
+  overflow: auto;
+}
+
+.statusLine {
+  margin: 0 0 10px;
+  padding-top: 2px;
+  border-top: 1px solid #e6edf6;
+  color: #5e6775;
+  font-size: 0.82rem;
+  line-height: 1.2;
+  letter-spacing: 0.01em;
+  font-family:
+    'IBM Plex Sans', 'Avenir Next', 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+}
+
+.sidebarTitle {
+  margin: 0 0 12px;
+  font-family: 'Iowan Old Style', 'Palatino Linotype', Palatino, 'Times New Roman', serif;
+  font-size: clamp(1.55rem, 2.2vw, 2rem);
+  letter-spacing: 0.03em;
+  font-weight: 560;
+  color: #11161d;
+}
+
+.eventList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: block;
+}
+
+.eventCard {
+  border: 0;
+  border-bottom: 1px solid #e7edf5;
+  background: transparent;
+  border-radius: 0;
+  margin: 0 6px;
+  padding: 14px 8px 16px;
+  box-shadow: none;
+  transition: background-color 140ms ease, border-radius 140ms ease;
+}
+
+.eventCard:hover {
+  background: rgba(231, 238, 247, 0.35);
+  border-radius: 8px;
+}
+
+.eventCardSelected {
+  background: rgba(226, 236, 248, 0.52);
+  border-bottom-color: #d8e2f0;
+  box-shadow: inset 3px 0 0 #8ea9cd;
+  border-radius: 8px;
+  padding-left: 12px;
+}
+
+.eventCard:last-child {
+  border-bottom: 0;
+}
+
+.eventHeader {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+  column-gap: 10px;
+}
+
+.eventDateHitArea {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  padding: 3px 4px 3px 0;
+}
+
+.eventDate {
+  display: block;
+  width: 100%;
+  font-family: 'Iowan Old Style', 'Palatino Linotype', Palatino, 'Times New Roman', serif;
+  font-size: 0.98rem;
+  line-height: 1.25;
+  color: #232b35;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.eventLink {
+  font-family:
+    'IBM Plex Sans', 'Avenir Next', 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #274e81;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  text-decoration: none;
+  border-bottom: 1px solid transparent;
+  white-space: nowrap;
+  line-height: 1;
+}
+
+.eventLink:hover {
+  border-bottom-color: rgba(39, 78, 129, 0.7);
+}
+
+.eventLink:focus-visible {
+  outline: 2px solid #4f74a6;
+  outline-offset: 2px;
+}
+
+.eventTitle {
+  margin-top: 8px;
+  font-family: 'Iowan Old Style', 'Palatino Linotype', Palatino, 'Times New Roman', serif;
+  font-size: 1.62rem;
+  line-height: 1.24;
+  color: #121820;
+}
+
+.eventLocation {
+  margin-top: 8px;
+  font-family:
+    'IBM Plex Sans', 'Avenir Next', 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #374458;
+}
+
+.eventNotes {
+  margin-top: 8px;
+  font-family: 'Iowan Old Style', 'Palatino Linotype', Palatino, 'Times New Roman', serif;
+  font-size: 1.03rem;
+  line-height: 1.5;
+  color: #1f2731;
+}
+
+.emptyState {
+  padding: 18px 14px;
+  border-radius: 14px;
+  border: 1px dashed #ccd5e3;
+  background: #f3f6fb;
+  color: #435166;
+  font-size: 0.94rem;
+  font-family:
+    'IBM Plex Sans', 'Avenir Next', 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+}
+
+.showAllButton {
+  width: 100%;
+  margin-top: 14px;
+  min-height: 40px;
+  border: 1px solid #d6e1ef;
+  border-radius: 10px;
+  background: #f4f8fe;
+  color: #2f415f;
+  font-family:
+    'IBM Plex Sans', 'Avenir Next', 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+  font-size: 0.92rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.showAllButton:hover {
+  background: #eaf1fb;
+}
+
+.showAllButton:focus-visible {
+  outline: 2px solid #4f74a6;
+  outline-offset: 2px;
+}
+
+@media (max-width: 980px) {
+  .grid {
+    grid-template-columns: 1fr;
+  }
+
+  .rightPane {
+    max-height: none;
+  }
+
+  .dayCell {
+    min-height: 84px;
+  }
+}
+
+@media (max-width: 680px) {
+  .frame {
+    padding: 10px;
+  }
+
+  .calendarHeader {
+    padding: 12px 12px 10px;
+  }
+
+  .weekdayLabel {
+    padding: 10px 4px;
+    font-size: 0.93rem;
+  }
+
+  .dayCell {
+    min-height: 72px;
+  }
+
+  .dayNumber {
+    font-size: 1.3rem;
+  }
+
+  .eventTitle {
+    font-size: 1.35rem;
+  }
+
+  .eventDate {
+    font-size: 0.9rem;
+  }
+
+  .eventLink {
+    font-size: 0.74rem;
+  }
+}

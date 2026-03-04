@@ -24,20 +24,15 @@ export function attachAutoResize(root: HTMLElement) {
   let mutationObserver: MutationObserver | null = null;
   let lastSentWidth = 0;
   let lastSentHeight = 0;
-  let lastSentAt = 0;
 
-  const RESIZE_POLL_MS = 400;
-  const FORCE_RESEND_MS = 2000;
+  const RESIZE_POLL_MS = 1200;
 
   const send = (height: number, width: number, force = false) => {
-    const now = Date.now();
     const changed = height !== lastSentHeight || width !== lastSentWidth;
-    const stale = now - lastSentAt >= FORCE_RESEND_MS;
-    if (!force && !changed && !stale) return;
+    if (!force && !changed) return;
 
     lastSentHeight = height;
     lastSentWidth = width;
-    lastSentAt = now;
     const msg: EmbedSizeMessage = { type: 'EMBED_SIZE', height, width };
     window.parent?.postMessage(msg, '*');
   };
@@ -96,7 +91,7 @@ export function attachAutoResize(root: HTMLElement) {
   });
 
   intervalId = window.setInterval(() => {
-    measureAndSend(true);
+    measureAndSend();
   }, RESIZE_POLL_MS);
 
   window.setTimeout(() => measureAndSend(true), 80);

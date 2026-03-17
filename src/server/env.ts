@@ -112,6 +112,27 @@ export function validateAdminEnv() {
   getRequiredEnv('SUPERBOWL_ADMIN_TOKEN');
 }
 
+export type CloudinaryGalleryEnv = {
+  cloudName: string;
+  apiKey: string;
+  apiSecret: string;
+  collection: string;
+  prefix?: string;
+};
+
+export function validateCloudinaryGalleryEnv(): CloudinaryGalleryEnv {
+  const collection = process.env.CLOUDINARY_COLLECTION?.trim() || 'Gallery';
+  const prefix = process.env.CLOUDINARY_GALLERY_PREFIX?.trim() || undefined;
+
+  return {
+    cloudName: getRequiredEnv('CLOUDINARY_CLOUD_NAME'),
+    apiKey: getRequiredEnv('CLOUDINARY_API_KEY'),
+    apiSecret: getRequiredEnv('CLOUDINARY_API_SECRET'),
+    collection,
+    prefix,
+  };
+}
+
 export function isEnvConfigError(error: unknown): error is EnvConfigError {
   return error instanceof EnvConfigError;
 }

@@ -9,6 +9,7 @@ const EMBEDS = [
   { name: 'Superb Owl', path: '/superb-owl?board=default&embedded=true&dense=true' },
   { name: 'Shavon Lloyd Contact', path: '/shavon-lloyd-contact?embedded=true&dense=true' },
   { name: 'Shavon Lloyd Calendar', path: '/shavon-lloyd-calendar?embedded=true&dense=true' },
+  { name: 'Shavon Lloyd Gallery', path: '/shavon-lloyd-gallery?embedded=true&dense=true' },
 ];
 
 function buildEmbedSnippet(path: string, origin: string) {

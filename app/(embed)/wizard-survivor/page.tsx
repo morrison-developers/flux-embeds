@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react';
 import { EmbedShell } from '../_shared/EmbedShell';
 import styles from './wizard-survivor.module.css';
 
@@ -125,6 +125,10 @@ type UpgradeMeta = {
   maxLevel?: number;
   requires?: UpgradeKey;
   blocksRefundIfOwned?: UpgradeKey[];
+};
+
+type ViewportState = {
+  width: number;
 };
 
 const TAU = Math.PI * 2;
@@ -482,18 +486,50 @@ function drawRune(ctx: CanvasRenderingContext2D, x: number, y: number, size: num
 }
 
 export default function WizardSurvivorPage() {
+  const shellRef = useRef<HTMLElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const joystickRef = useRef<HTMLDivElement | null>(null);
   const gameRef = useRef<RuntimeState>(makeInitialState());
   const pausedRef = useRef(false);
   const keysRef = useRef<Record<string, boolean>>({});
+  const touchMoveRef = useRef<Vec>({ x: 0, y: 0 });
+  const joystickPointerIdRef = useRef<number | null>(null);
   const animationRef = useRef<number | null>(null);
   const [hud, setHud] = useState<HudState>(() => createHud(gameRef.current));
   const [upgradeOptions, setUpgradeOptions] = useState<UpgradeOption[]>([]);
   const [menuMode, setMenuMode] = useState<MenuMode>('closed');
+  const [viewport, setViewport] = useState<ViewportState>({ width: 0 });
+  const [touchIndicator, setTouchIndicator] = useState<Vec>({ x: 0, y: 0 });
+
+  const isMobile = viewport.width > 0 && viewport.width <= 768;
+
+  useEffect(() => {
+    const shell = shellRef.current;
+    if (!shell) return;
+
+    const updateViewport = () => {
+      const rect = shell.getBoundingClientRect();
+      setViewport({
+        width: Math.round(rect.width),
+      });
+    };
+
+    updateViewport();
+
+    const observer = new ResizeObserver(updateViewport);
+    observer.observe(shell);
+    window.addEventListener('resize', updateViewport);
+
+    return () => {
+      observer.disconnect();
+      window.removeEventListener('resize', updateViewport);
+    };
+  }, []);
 
   useEffect(() => {
     const canvas = canvasRef.current;
-    if (!canvas) return;
+    const shell = shellRef.current;
+    if (!canvas || !shell) return;
 
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
@@ -504,8 +540,9 @@ export default function WizardSurvivorPage() {
     let hudTimer = 0;
 
     const resize = () => {
-      width = window.innerWidth;
-      height = window.innerHeight;
+      const rect = shell.getBoundingClientRect();
+      width = Math.max(1, Math.floor(rect.width));
+      height = Math.max(1, Math.floor(rect.height));
       const ratio = window.devicePixelRatio || 1;
       canvas.width = Math.floor(width * ratio);
       canvas.height = Math.floor(height * ratio);
@@ -593,8 +630,14 @@ export default function WizardSurvivorPage() {
       state.player.invulnerableTimer = Math.max(0, state.player.invulnerableTimer - delta);
 
       const move = {
-        x: (keysRef.current.KeyD || keysRef.current.ArrowRight ? 1 : 0) - (keysRef.current.KeyA || keysRef.current.ArrowLeft ? 1 : 0),
-        y: (keysRef.current.KeyS || keysRef.current.ArrowDown ? 1 : 0) - (keysRef.current.KeyW || keysRef.current.ArrowUp ? 1 : 0),
+        x:
+          (keysRef.current.KeyD || keysRef.current.ArrowRight ? 1 : 0) -
+          (keysRef.current.KeyA || keysRef.current.ArrowLeft ? 1 : 0) +
+          touchMoveRef.current.x,
+        y:
+          (keysRef.current.KeyS || keysRef.current.ArrowDown ? 1 : 0) -
+          (keysRef.current.KeyW || keysRef.current.ArrowUp ? 1 : 0) +
+          touchMoveRef.current.y,
       };
       if (move.x !== 0 || move.y !== 0) {
         const direction = normalize(move);
@@ -913,6 +956,8 @@ export default function WizardSurvivorPage() {
     };
 
     resize();
+    const resizeObserver = new ResizeObserver(resize);
+    resizeObserver.observe(shell);
     window.addEventListener('resize', resize);
     window.addEventListener('keydown', handleKeyDown);
     window.addEventListener('keyup', handleKeyUp);
@@ -922,11 +967,19 @@ export default function WizardSurvivorPage() {
       if (animationRef.current !== null) {
         window.cancelAnimationFrame(animationRef.current);
       }
+      resizeObserver.disconnect();
       window.removeEventListener('resize', resize);
       window.removeEventListener('keydown', handleKeyDown);
       window.removeEventListener('keyup', handleKeyUp);
     };
   }, [menuMode]);
+
+  useEffect(() => {
+    if (!isMobile || menuMode !== 'closed') {
+      touchMoveRef.current = { x: 0, y: 0 };
+      setTouchIndicator({ x: 0, y: 0 });
+    }
+  }, [isMobile, menuMode]);
 
   const chooseUpgrade = (option: UpgradeOption) => {
     applyUpgrade(gameRef.current, option.key);
@@ -973,9 +1026,58 @@ export default function WizardSurvivorPage() {
     setHud(createHud(state));
   };
 
+  const updateTouchMove = (clientX: number, clientY: number) => {
+    const joystick = joystickRef.current;
+    if (!joystick) return;
+    const rect = joystick.getBoundingClientRect();
+    const maxRadius = rect.width * 0.34;
+    const rawX = clientX - (rect.left + rect.width / 2);
+    const rawY = clientY - (rect.top + rect.height / 2);
+    const distance = Math.hypot(rawX, rawY);
+    const scale = distance > maxRadius ? maxRadius / distance : 1;
+
+    touchMoveRef.current = {
+      x: clamp((rawX * scale) / maxRadius, -1, 1),
+      y: clamp((rawY * scale) / maxRadius, -1, 1),
+    };
+    setTouchIndicator(touchMoveRef.current);
+  };
+
+  const resetTouchMove = () => {
+    joystickPointerIdRef.current = null;
+    touchMoveRef.current = { x: 0, y: 0 };
+    setTouchIndicator({ x: 0, y: 0 });
+  };
+
+  const handleJoystickPointerDown = (event: ReactPointerEvent<HTMLDivElement>) => {
+    if (!isMobile || menuMode !== 'closed') return;
+    joystickPointerIdRef.current = event.pointerId;
+    event.currentTarget.setPointerCapture(event.pointerId);
+    updateTouchMove(event.clientX, event.clientY);
+  };
+
+  const handleJoystickPointerMove = (event: ReactPointerEvent<HTMLDivElement>) => {
+    if (joystickPointerIdRef.current !== event.pointerId) return;
+    updateTouchMove(event.clientX, event.clientY);
+  };
+
+  const handleJoystickPointerUp = (event: ReactPointerEvent<HTMLDivElement>) => {
+    if (joystickPointerIdRef.current !== event.pointerId) return;
+    event.currentTarget.releasePointerCapture(event.pointerId);
+    resetTouchMove();
+  };
+
+  const joystickThumbStyle = {
+    transform: `translate(${touchIndicator.x * 30}px, ${touchIndicator.y * 30}px)`,
+  };
+
   return (
     <EmbedShell>
-      <main className={styles.shell}>
+      <main
+        ref={shellRef}
+        className={styles.shell}
+        data-mobile={isMobile ? 'true' : undefined}
+      >
         <canvas ref={canvasRef} className={styles.canvas} />
 
         <section className={styles.hud}>
@@ -991,7 +1093,10 @@ export default function WizardSurvivorPage() {
           <div className={styles.panel}>
             <div className={styles.eyebrow}>Wizard Survivor</div>
             <h1>Hold the circle.</h1>
-            <p>Move with WASD or arrow keys. Stay alive, collect gems, and walk into spell relics.</p>
+            <p>
+              Move with {isMobile ? 'the touch pad' : 'WASD or arrow keys'}. Stay alive, collect gems,
+              and walk into spell relics.
+            </p>
           </div>
 
           <div className={styles.stats}>
@@ -1027,6 +1132,23 @@ export default function WizardSurvivorPage() {
             ))}
           </div>
         </section>
+
+        {isMobile && menuMode === 'closed' ? (
+          <div className={styles.mobileControls}>
+            <div
+              ref={joystickRef}
+              className={styles.joystick}
+              onPointerDown={handleJoystickPointerDown}
+              onPointerMove={handleJoystickPointerMove}
+              onPointerUp={handleJoystickPointerUp}
+              onPointerCancel={handleJoystickPointerUp}
+            >
+              <div className={styles.joystickRing} />
+              <div className={styles.joystickThumb} style={joystickThumbStyle} />
+            </div>
+            <div className={styles.mobileHint}>Drag to move</div>
+          </div>
+        ) : null}
 
         {menuMode === 'levelup' && upgradeOptions.length > 0 ? (
           <section className={styles.overlay}>

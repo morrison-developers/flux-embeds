@@ -120,6 +120,13 @@ export type CloudinaryGalleryEnv = {
   prefix?: string;
 };
 
+export type ShopifyStorefrontEnv = {
+  storeDomain: string;
+  storefrontApiToken: string;
+  apiVersion: string;
+  onlineStoreDomain: string;
+};
+
 export function validateCloudinaryGalleryEnv(): CloudinaryGalleryEnv {
   const collection = process.env.CLOUDINARY_COLLECTION?.trim() || 'Gallery';
   const prefix = process.env.CLOUDINARY_GALLERY_PREFIX?.trim() || undefined;
@@ -130,6 +137,15 @@ export function validateCloudinaryGalleryEnv(): CloudinaryGalleryEnv {
     apiSecret: getRequiredEnv('CLOUDINARY_API_SECRET'),
     collection,
     prefix,
+  };
+}
+
+export function validateShopifyStorefrontEnv(): ShopifyStorefrontEnv {
+  return {
+    storeDomain: getRequiredEnv('SHOPIFY_STORE_DOMAIN').trim(),
+    storefrontApiToken: getRequiredEnv('SHOPIFY_STOREFRONT_API_TOKEN').trim(),
+    apiVersion: process.env.SHOPIFY_STOREFRONT_API_VERSION?.trim() || '2026-01',
+    onlineStoreDomain: getRequiredEnv('SHOPIFY_ONLINE_STORE_DOMAIN').trim(),
   };
 }
 

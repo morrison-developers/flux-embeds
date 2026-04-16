@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { Suspense, useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { EmbedShell } from '../_shared/EmbedShell';
 import styles from './shavon-lloyd-shopify-embed.module.css';
@@ -34,6 +34,14 @@ type EmbedState =
   | { status: 'ready'; products: Product[] };
 
 export default function ShavonLloydShopifyEmbedPage() {
+  return (
+    <Suspense fallback={null}>
+      <ShavonLloydShopifyEmbedContent />
+    </Suspense>
+  );
+}
+
+function ShavonLloydShopifyEmbedContent() {
   const searchParams = useSearchParams();
   const handle = useMemo(() => searchParams.get('handle')?.trim() || 'frontpage', [searchParams]);
   const [state, setState] = useState<EmbedState>({ status: 'loading' });

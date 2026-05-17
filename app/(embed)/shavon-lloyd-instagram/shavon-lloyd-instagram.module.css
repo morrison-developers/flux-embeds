@@ -1,0 +1,129 @@
+.root {
+  width: 100%;
+  padding: 24px 16px;
+  background: transparent;
+}
+
+.frame {
+  width: min(100%, 1200px);
+  margin: 0 auto;
+}
+
+.header {
+  display: flex;
+  gap: 12px;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: 20px;
+}
+
+.title {
+  margin: 0;
+  color: #0b121b;
+  font-family: Joan, "Times New Roman", serif;
+  font-size: clamp(2rem, 8vw, 3rem);
+  font-style: normal;
+  font-weight: 400;
+  line-height: 1;
+  letter-spacing: 0.39rem;
+}
+
+.profileLink,
+.followLink {
+  color: #0b121b;
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 0.9rem;
+  font-weight: 700;
+  line-height: 1.2;
+  text-decoration: none;
+}
+
+.profileLink:hover,
+.followLink:hover {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 2px;
+}
+
+.tile {
+  position: relative;
+  display: block;
+  aspect-ratio: 1;
+  overflow: hidden;
+  background: #ece8e6;
+}
+
+.image {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 180ms ease, opacity 180ms ease;
+}
+
+.tile:hover .image {
+  transform: scale(1.03);
+  opacity: 0.92;
+}
+
+.badge {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  padding: 4px 7px;
+  background: rgba(11, 18, 27, 0.82);
+  color: #fff;
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 0.7rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.statusBlock {
+  display: grid;
+  gap: 10px;
+  min-height: 160px;
+  align-content: center;
+}
+
+.statusTitle,
+.statusText {
+  margin: 0;
+  color: #0b121b;
+  font-family: Arial, Helvetica, sans-serif;
+  line-height: 1.5;
+}
+
+.statusTitle {
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.statusText {
+  font-size: 0.95rem;
+}
+
+@media (min-width: 640px) {
+  .grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 900px) {
+  .root {
+    padding: 32px 24px;
+  }
+
+  .header {
+    margin-bottom: 24px;
+  }
+
+  .grid {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+  }
+}

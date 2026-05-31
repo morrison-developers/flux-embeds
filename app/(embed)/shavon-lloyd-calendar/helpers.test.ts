@@ -2,6 +2,7 @@ import {
   buildMonthGrid,
   filterVisibleEvents,
   formatEventDateTime,
+  splitEventsByUpcomingStatus,
 } from './calendar-utils';
 import { extractCollectionRows, mapCollectionRowsToEvents, stripHtmlToText } from './data';
 import {
@@ -199,6 +200,20 @@ describe('calendar math', () => {
 
     const selected = filterVisibleEvents(events, '2026-01-09', new Date('2026-01-10T12:00:00'));
     expect(selected.map((event) => event.id)).toEqual(['past']);
+  });
+
+  it('splits list view events into upcoming ascending and past descending', () => {
+    const events = [
+      { id: 'past-old', title: 'Past Old', start: '2026-01-01T09:00:00' },
+      { id: 'future-late', title: 'Future Late', start: '2026-01-14T13:00:00' },
+      { id: 'past-new', title: 'Past New', start: '2026-01-09T09:00:00' },
+      { id: 'future-early', title: 'Future Early', start: '2026-01-12' },
+    ];
+
+    const grouped = splitEventsByUpcomingStatus(events, new Date('2026-01-10T12:00:00'));
+
+    expect(grouped.upcoming.map((event) => event.id)).toEqual(['future-early', 'future-late']);
+    expect(grouped.past.map((event) => event.id)).toEqual(['past-new', 'past-old']);
   });
 
   it('formats date/time output', () => {

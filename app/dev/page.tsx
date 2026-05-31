@@ -35,14 +35,26 @@ export default function DevPage() {
     function onMessage(event: MessageEvent) {
       const data = event.data;
       if (!data || typeof data !== 'object') return;
-      if (!('type' in data) || data.type !== 'EMBED_SIZE') return;
+      if (!('type' in data)) return;
 
       const iframes = document.querySelectorAll<HTMLIFrameElement>('iframe[data-embed]');
       for (const iframe of iframes) {
         if (iframe.contentWindow === event.source) {
-          const height = Number((data as { height?: unknown }).height);
-          if (!Number.isFinite(height)) return;
-          iframe.style.height = `${height}px`;
+          if (data.type === 'EMBED_SIZE') {
+            const height = Number((data as { height?: unknown }).height);
+            if (!Number.isFinite(height)) return;
+            iframe.style.height = `${height}px`;
+          }
+
+          if (data.type === 'EMBED_SCROLL') {
+            const top = Number((data as { top?: unknown }).top);
+            if (!Number.isFinite(top)) return;
+
+            window.scrollTo({
+              top: window.scrollY + iframe.getBoundingClientRect().top + top,
+              behavior: 'smooth',
+            });
+          }
         }
       }
     }

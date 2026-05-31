@@ -52,6 +52,87 @@
   height: auto;
 }
 
+.viewer {
+  margin: 0 0 24px;
+  padding: 12px;
+  border: 1px solid rgba(11, 18, 27, 0.14);
+  background: rgba(255, 255, 255, 0.82);
+}
+
+.viewerToolbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+.viewerButton {
+  min-height: 36px;
+  padding: 0 12px;
+  border: 1px solid rgba(11, 18, 27, 0.2);
+  border-radius: 4px;
+  background: #fff;
+  color: #0b121b;
+  font: inherit;
+  cursor: pointer;
+}
+
+.viewerButton:hover {
+  border-color: rgba(11, 18, 27, 0.44);
+}
+
+.closeButton {
+  position: relative;
+  display: inline-grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  margin-left: auto;
+  border: 1px solid rgba(11, 18, 27, 0.2);
+  border-radius: 999px;
+  background: #fff;
+  color: #0b121b;
+  cursor: pointer;
+}
+
+.closeButton:hover {
+  border-color: rgba(11, 18, 27, 0.44);
+}
+
+.closeButton span,
+.closeButton span::after {
+  display: block;
+  width: 16px;
+  height: 2px;
+  border-radius: 999px;
+  background: currentColor;
+}
+
+.closeButton span {
+  transform: rotate(45deg);
+}
+
+.closeButton span::after {
+  content: "";
+  transform: rotate(90deg);
+}
+
+.viewerCount {
+  min-width: 52px;
+  color: #0b121b;
+  font-size: 0.92rem;
+  text-align: center;
+}
+
+.viewerImage {
+  display: block;
+  width: 100%;
+  max-height: min(78vh, 860px);
+  object-fit: contain;
+  background: #f6f4ef;
+}
+
 @media (min-width: 768px) {
   .root {
     padding: 32px 24px;
@@ -59,5 +140,25 @@
 
   .title {
     margin-bottom: 24px;
+  }
+}
+
+@media (max-width: 520px) {
+  .viewerToolbar {
+    flex-wrap: wrap;
+  }
+
+  .viewerButton {
+    flex: 1 1 auto;
+  }
+
+  .closeButton {
+    flex: 0 0 36px;
+    margin-left: auto;
+  }
+
+  .viewerCount {
+    order: -1;
+    width: 100%;
   }
 }

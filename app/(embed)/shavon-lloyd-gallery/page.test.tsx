@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   mapGalleryImagesToPhotos,
@@ -8,7 +8,6 @@ import {
 } from './gallery';
 
 const masonryAlbum = vi.fn();
-const lightbox = vi.fn();
 
 vi.mock('../_shared/EmbedShell', () => ({
   EmbedShell: ({ children }: { children: React.ReactNode }) => <>{children}</>,
@@ -31,21 +30,13 @@ vi.mock('react-photo-album', () => ({
   },
 }));
 
-vi.mock('yet-another-react-lightbox', () => ({
-  default: (props: { open: boolean; index: number }) => {
-    lightbox(props);
-    return props.open ? <div data-testid="lightbox">lightbox:{props.index}</div> : null;
-  },
-}));
-
 describe('shavon lloyd gallery page', () => {
   beforeEach(() => {
     masonryAlbum.mockReset();
-    lightbox.mockReset();
     vi.restoreAllMocks();
   });
 
-  it('renders the local gallery and opens full-size images in the lightbox', async () => {
+  it('renders the local gallery and opens full-size images inline', async () => {
     const { default: Page } = await import('./page');
     render(<Page />);
 
@@ -62,17 +53,28 @@ describe('shavon lloyd gallery page', () => {
 
     fireEvent.click(screen.getByText('open photo'));
 
-    await waitFor(() => {
-      expect(screen.getByTestId('lightbox').textContent).toBe('lightbox:0');
+    const selectedPhoto = await screen.findByRole('dialog', {
+      name: 'Shavon Lloyd photo 1',
     });
+    const selectedImage = selectedPhoto.querySelector('img');
 
-    expect(lightbox).toHaveBeenLastCalledWith(
-      expect.objectContaining({
-        slides: expect.arrayContaining([
-          expect.objectContaining({ src: '/gallery/shavon-photo-1.webp' }),
-        ]),
-      })
-    );
+    expect(selectedImage?.getAttribute('src')).toBe('/gallery/shavon-photo-1.webp');
+    expect(screen.getByText('1 / 12')).toBeTruthy();
+  });
+
+  it('can navigate and close the inline photo viewer', async () => {
+    const { default: Page } = await import('./page');
+    render(<Page />);
+
+    fireEvent.click(screen.getByText('open photo'));
+    fireEvent.click(await screen.findByRole('button', { name: 'Next photo' }));
+
+    expect(screen.getByRole('dialog', { name: 'Shavon Lloyd photo 2' })).toBeTruthy();
+    expect(screen.getByText('2 / 12')).toBeTruthy();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Close selected photo' }));
+
+    expect(screen.queryByRole('dialog')).toBeNull();
   });
 });
 

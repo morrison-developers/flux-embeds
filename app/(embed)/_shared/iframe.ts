@@ -8,9 +8,21 @@ export type EmbedReadyMessage = {
   type: 'EMBED_READY';
 };
 
+export type EmbedScrollMessage = {
+  type: 'EMBED_SCROLL';
+  top: number;
+  behavior?: ScrollBehavior;
+};
+
 export function postEmbedReady() {
   if (typeof window === 'undefined') return;
   const msg: EmbedReadyMessage = { type: 'EMBED_READY' };
+  window.parent?.postMessage(msg, '*');
+}
+
+export function postEmbedScroll(top: number, behavior: ScrollBehavior = 'smooth') {
+  if (typeof window === 'undefined') return;
+  const msg: EmbedScrollMessage = { type: 'EMBED_SCROLL', top, behavior };
   window.parent?.postMessage(msg, '*');
 }
 

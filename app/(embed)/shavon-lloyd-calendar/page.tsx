@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import { EmbedShell } from '../_shared/EmbedShell';
 import styles from './shavon-lloyd-calendar.module.css';
 import {
@@ -11,6 +11,7 @@ import {
   formatEventDateTime,
   formatMonthLabel,
   shiftMonth,
+  splitEventsByUpcomingStatus,
   startOfMonth,
   toDateKeyFromEventStart,
   WEEKDAY_LABELS,
@@ -35,6 +36,34 @@ const POLL_INTERVAL_MS = 800;
 const POLL_TIMEOUT_MS = 10_000;
 
 type DataSourceStatus = 'loading' | 'host' | 'sample' | 'empty';
+type ViewMode = 'calendar' | 'list';
+
+function subscribeToLocation() {
+  return () => {};
+}
+
+function getUrlParams() {
+  if (typeof window === 'undefined') return false;
+
+  const params = new URLSearchParams(window.location.search);
+  return params;
+}
+
+function getRequestedViewModeSnapshot(): ViewMode {
+  const params = getUrlParams();
+  if (!params) return 'calendar';
+
+  return params.get('view') === 'list' ? 'list' : 'calendar';
+}
+
+function getViewToggleSnapshot() {
+  if (process.env.NODE_ENV === 'production') return false;
+
+  const params = getUrlParams();
+  if (!params) return false;
+
+  return params.get('viewToggle') === 'true';
+}
 
 function classNames(...parts: Array<string | false | null | undefined>) {
   return parts.filter(Boolean).join(' ');
@@ -52,11 +81,53 @@ function DayEventBadge({ count }: { count: number }) {
   );
 }
 
+function EventCard({ event, selected = false }: { event: CalendarEvent; selected?: boolean }) {
+  const eventDateLabel = formatEventDateTime(event.start, event.end);
+
+  return (
+    <li className={classNames(styles.eventCard, selected && styles.eventCardSelected)}>
+      <div className={styles.eventHeader}>
+        <div className={styles.eventDateHitArea} title={eventDateLabel}>
+          <div className={styles.eventDate}>{eventDateLabel}</div>
+        </div>
+        {event.href ? (
+          <a
+            href={event.href}
+            target="_blank"
+            rel="noopener noreferrer"
+            className={styles.eventLink}
+          >
+            View details
+          </a>
+        ) : null}
+      </div>
+
+      <div className={styles.eventTitle}>{event.title}</div>
+
+      {event.location ? <div className={styles.eventLocation}>{event.location}</div> : null}
+
+      {event.notes ? <div className={styles.eventNotes}>{event.notes}</div> : null}
+    </li>
+  );
+}
+
 export default function ShavonLloydCalendarPage() {
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [currentMonth, setCurrentMonth] = useState(() => startOfMonth(new Date()));
   const [dataSourceStatus, setDataSourceStatus] = useState<DataSourceStatus>('loading');
+  const [viewMode, setViewMode] = useState<ViewMode>('calendar');
+  const requestedViewMode = useSyncExternalStore(
+    subscribeToLocation,
+    getRequestedViewModeSnapshot,
+    () => 'calendar'
+  );
+  const showViewToggle = useSyncExternalStore(
+    subscribeToLocation,
+    getViewToggleSnapshot,
+    () => false
+  );
+  const [now] = useState(() => new Date());
 
   const requestIdRef = useRef('');
   const settledRef = useRef(false);
@@ -185,12 +256,19 @@ export default function ShavonLloydCalendarPage() {
   const eventCounts = useMemo(() => countEventsByDate(events), [events]);
 
   const visibleEvents = useMemo(
-    () => filterVisibleEvents(events, selectedDate),
-    [events, selectedDate]
+    () => filterVisibleEvents(events, selectedDate, now),
+    [events, now, selectedDate]
+  );
+
+  const groupedEvents = useMemo(
+    () => splitEventsByUpcomingStatus(events, now),
+    [events, now]
   );
 
   const sidebarTitle = selectedDate ? formatDateKeyLabel(selectedDate) : 'Upcoming';
   const showSourceLabel = process.env.NODE_ENV !== 'production';
+  const effectiveViewMode =
+    requestedViewMode === 'list' ? 'list' : showViewToggle ? viewMode : 'calendar';
 
   const sourceLabel = useMemo(() => {
     if (dataSourceStatus === 'loading') {
@@ -220,132 +298,168 @@ export default function ShavonLloydCalendarPage() {
     <EmbedShell defaultBg="transparent">
       <section className={styles.root}>
         <div className={styles.frame}>
-          <div className={styles.grid}>
-            <div className={styles.leftPane}>
-              <header className={styles.calendarHeader}>
-                <h2 className={styles.monthTitle}>{formatMonthLabel(currentMonth)}</h2>
-                <div className={styles.navButtons}>
-                  <button
-                    type="button"
-                    className={styles.navButton}
-                    onClick={() => setCurrentMonth((prev) => shiftMonth(prev, -1))}
-                    aria-label="Previous month"
-                  >
-                    <svg viewBox="0 0 24 24" className={styles.navIcon} aria-hidden>
-                      <path d="M15 6l-6 6 6 6" />
-                    </svg>
-                  </button>
-                  <button
-                    type="button"
-                    className={styles.navButton}
-                    onClick={() => setCurrentMonth((prev) => shiftMonth(prev, 1))}
-                    aria-label="Next month"
-                  >
-                    <svg viewBox="0 0 24 24" className={styles.navIcon} aria-hidden>
-                      <path d="M9 6l6 6-6 6" />
-                    </svg>
-                  </button>
-                </div>
-              </header>
-
-              <div className={styles.weekdays}>
-                {WEEKDAY_LABELS.map((day) => (
-                  <div key={day} className={styles.weekdayLabel}>
-                    {day}
-                  </div>
-                ))}
-              </div>
-
-              <div className={styles.dayGrid}>
-                {monthCells.map((cell) => {
-                  const count = eventCounts.get(cell.key) ?? 0;
-                  const isSelected = selectedDate === cell.key;
-
-                  return (
-                    <button
-                      key={cell.key}
-                      type="button"
-                      onClick={() => {
-                        setSelectedDate(cell.key);
-                        if (!cell.inCurrentMonth) {
-                          setCurrentMonth(startOfMonth(cell.date));
-                        }
-                      }}
-                      className={classNames(
-                        styles.dayCell,
-                        !cell.inCurrentMonth && styles.dayCellOutside,
-                        cell.isToday && styles.dayCellToday,
-                        isSelected && styles.dayCellSelected
-                      )}
-                      aria-pressed={isSelected}
-                    >
-                      {count > 0 ? <DayEventBadge count={count} /> : null}
-                      <span className={styles.dayNumber}>{cell.date.getDate()}</span>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-
-            <aside className={styles.rightPane}>
-              {showSourceLabel ? <div className={styles.statusLine}>{sourceLabel}</div> : null}
-              <h3 className={styles.sidebarTitle}>{sidebarTitle}</h3>
-
-              <ul className={styles.eventList}>
-                {visibleEvents.map((event) => {
-                  const eventDateKey = toDateKeyFromEventStart(event.start);
-                  const selectedCard = Boolean(selectedDate && eventDateKey === selectedDate);
-                  const eventDateLabel = formatEventDateTime(event.start, event.end);
-
-                  return (
-                    <li
-                      key={event.id}
-                      className={classNames(
-                        styles.eventCard,
-                        selectedCard && styles.eventCardSelected
-                      )}
-                    >
-                      <div className={styles.eventHeader}>
-                        <div className={styles.eventDateHitArea} title={eventDateLabel}>
-                          <div className={styles.eventDate}>{eventDateLabel}</div>
-                        </div>
-                        {event.href ? (
-                          <a
-                            href={event.href}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className={styles.eventLink}
-                          >
-                            View details
-                          </a>
-                        ) : null}
-                      </div>
-
-                      <div className={styles.eventTitle}>{event.title}</div>
-
-                      {event.location ? (
-                        <div className={styles.eventLocation}>{event.location}</div>
-                      ) : null}
-
-                      {event.notes ? <div className={styles.eventNotes}>{event.notes}</div> : null}
-                    </li>
-                  );
-                })}
-
-                {visibleEvents.length === 0 ? (
-                  <li className={styles.emptyState}>{emptyMessage}</li>
-                ) : null}
-              </ul>
-
-              {selectedDate ? (
+          {showViewToggle ? (
+            <div className={styles.viewBar}>
+              <div className={styles.viewToggle} aria-label="Calendar display mode">
                 <button
                   type="button"
-                  onClick={() => setSelectedDate(null)}
-                  className={styles.showAllButton}
+                  className={classNames(
+                    styles.viewToggleButton,
+                    viewMode === 'calendar' && styles.viewToggleButtonActive
+                  )}
+                  onClick={() => setViewMode('calendar')}
+                  aria-pressed={viewMode === 'calendar'}
                 >
-                  Show all upcoming
+                  Calendar
                 </button>
-              ) : null}
+                <button
+                  type="button"
+                  className={classNames(
+                    styles.viewToggleButton,
+                    viewMode === 'list' && styles.viewToggleButtonActive
+                  )}
+                  onClick={() => {
+                    setViewMode('list');
+                    setSelectedDate(null);
+                  }}
+                  aria-pressed={viewMode === 'list'}
+                >
+                  List
+                </button>
+              </div>
+            </div>
+          ) : null}
+
+          <div className={styles.grid}>
+            {effectiveViewMode === 'calendar' ? (
+              <div className={styles.leftPane}>
+                <header className={styles.calendarHeader}>
+                  <h2 className={styles.monthTitle}>{formatMonthLabel(currentMonth)}</h2>
+                  <div className={styles.navButtons}>
+                    <button
+                      type="button"
+                      className={styles.navButton}
+                      onClick={() => setCurrentMonth((prev) => shiftMonth(prev, -1))}
+                      aria-label="Previous month"
+                    >
+                      <svg viewBox="0 0 24 24" className={styles.navIcon} aria-hidden>
+                        <path d="M15 6l-6 6 6 6" />
+                      </svg>
+                    </button>
+                    <button
+                      type="button"
+                      className={styles.navButton}
+                      onClick={() => setCurrentMonth((prev) => shiftMonth(prev, 1))}
+                      aria-label="Next month"
+                    >
+                      <svg viewBox="0 0 24 24" className={styles.navIcon} aria-hidden>
+                        <path d="M9 6l6 6-6 6" />
+                      </svg>
+                    </button>
+                  </div>
+                </header>
+
+                <div className={styles.weekdays}>
+                  {WEEKDAY_LABELS.map((day) => (
+                    <div key={day} className={styles.weekdayLabel}>
+                      {day}
+                    </div>
+                  ))}
+                </div>
+
+                <div className={styles.dayGrid}>
+                  {monthCells.map((cell) => {
+                    const count = eventCounts.get(cell.key) ?? 0;
+                    const isSelected = selectedDate === cell.key;
+
+                    return (
+                      <button
+                        key={cell.key}
+                        type="button"
+                        onClick={() => {
+                          setSelectedDate(cell.key);
+                          if (!cell.inCurrentMonth) {
+                            setCurrentMonth(startOfMonth(cell.date));
+                          }
+                        }}
+                        className={classNames(
+                          styles.dayCell,
+                          !cell.inCurrentMonth && styles.dayCellOutside,
+                          cell.isToday && styles.dayCellToday,
+                          isSelected && styles.dayCellSelected
+                        )}
+                        aria-pressed={isSelected}
+                      >
+                        {count > 0 ? <DayEventBadge count={count} /> : null}
+                        <span className={styles.dayNumber}>{cell.date.getDate()}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            ) : null}
+
+            <aside
+              className={classNames(
+                styles.rightPane,
+                effectiveViewMode === 'list' && styles.listPane
+              )}
+            >
+              {showSourceLabel ? <div className={styles.statusLine}>{sourceLabel}</div> : null}
+              {effectiveViewMode === 'calendar' ? (
+                <>
+                  <h3 className={styles.sidebarTitle}>{sidebarTitle}</h3>
+
+                  <ul className={styles.eventList}>
+                    {visibleEvents.map((event) => {
+                      const eventDateKey = toDateKeyFromEventStart(event.start);
+                      const selectedCard = Boolean(selectedDate && eventDateKey === selectedDate);
+
+                      return <EventCard key={event.id} event={event} selected={selectedCard} />;
+                    })}
+
+                    {visibleEvents.length === 0 ? (
+                      <li className={styles.emptyState}>{emptyMessage}</li>
+                    ) : null}
+                  </ul>
+
+                  {selectedDate ? (
+                    <button
+                      type="button"
+                      onClick={() => setSelectedDate(null)}
+                      className={styles.showAllButton}
+                    >
+                      Show all upcoming
+                    </button>
+                  ) : null}
+                </>
+              ) : (
+                <div className={styles.listView}>
+                  <section className={styles.eventSection}>
+                    <h3 className={styles.sidebarTitle}>Upcoming Events</h3>
+                    <ul className={styles.eventList}>
+                      {groupedEvents.upcoming.map((event) => (
+                        <EventCard key={event.id} event={event} />
+                      ))}
+                      {groupedEvents.upcoming.length === 0 ? (
+                        <li className={styles.emptyState}>{emptyMessage}</li>
+                      ) : null}
+                    </ul>
+                  </section>
+
+                  <section className={styles.eventSection}>
+                    <h3 className={styles.sidebarTitle}>Past Events</h3>
+                    <ul className={styles.eventList}>
+                      {groupedEvents.past.map((event) => (
+                        <EventCard key={event.id} event={event} />
+                      ))}
+                      {groupedEvents.past.length === 0 ? (
+                        <li className={styles.emptyState}>No past events.</li>
+                      ) : null}
+                    </ul>
+                  </section>
+                </div>
+              )}
             </aside>
           </div>
         </div>

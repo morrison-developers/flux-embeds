@@ -185,6 +185,28 @@ export function filterVisibleEvents(
   });
 }
 
+export function splitEventsByUpcomingStatus(events: CalendarEvent[], now = new Date()) {
+  const nowTime = now.getTime();
+  const upcoming: CalendarEvent[] = [];
+  const past: CalendarEvent[] = [];
+
+  for (const event of events) {
+    const parsed = parseEventDate(event.start);
+    if (!parsed) continue;
+
+    if (parsed.getTime() >= nowTime) {
+      upcoming.push(event);
+    } else {
+      past.push(event);
+    }
+  }
+
+  return {
+    upcoming: sortEventsAscending(upcoming),
+    past: sortEventsAscending(past).reverse(),
+  };
+}
+
 export function sortEventsAscending(events: CalendarEvent[]) {
   return [...events].sort((left, right) => {
     const leftDate = parseEventDate(left.start);

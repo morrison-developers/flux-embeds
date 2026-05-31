@@ -45,80 +45,34 @@ describe('shavon lloyd gallery page', () => {
     vi.restoreAllMocks();
   });
 
-  it('renders loading state before gallery data resolves', async () => {
-    let resolveFetch: ((value: Response) => void) | null = null;
-    vi.spyOn(globalThis, 'fetch').mockImplementation(
-      () =>
-        new Promise<Response>((resolve) => {
-          resolveFetch = resolve;
-        })
-    );
-
+  it('renders the local gallery and opens full-size images in the lightbox', async () => {
     const { default: Page } = await import('./page');
     render(<Page />);
 
-    expect(screen.getByText('Loading gallery...')).toBeTruthy();
+    expect(screen.getByText('Media Gallery')).toBeTruthy();
 
-    if (!resolveFetch) {
-      throw new Error('fetch resolver was not captured');
-    }
-
-    const completeFetch: (value: Response) => void = resolveFetch;
-
-    completeFetch(
-      new Response(JSON.stringify({ folderName: 'Gallery', images: [] }), { status: 200 })
+    expect(screen.getByTestId('photo-count').textContent).toBe('12');
+    expect(masonryAlbum).toHaveBeenCalledWith(
+      expect.objectContaining({
+        photos: expect.arrayContaining([
+          expect.objectContaining({ src: '/gallery/thumbs/shavon-photo-1.webp' }),
+        ]),
+      })
     );
 
-    await waitFor(() => {
-      expect(screen.getByTestId('photo-count').textContent).toBe('0');
-    });
-  });
-
-  it('renders an error state when fetch fails', async () => {
-    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
-      new Response('boom', { status: 500, statusText: 'Server Error' })
-    );
-
-    const { default: Page } = await import('./page');
-    render(<Page />);
-
-    await waitFor(() => {
-      expect(screen.getByText('Error loading gallery')).toBeTruthy();
-    });
-  });
-
-  it('renders the gallery heading and opens the lightbox on click', async () => {
-    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
-      new Response(
-        JSON.stringify({
-          folderName: 'Media Gallery',
-          images: [
-            {
-              id: 'img-1',
-              name: 'img-1',
-              url: 'https://cdn.example.com/image-1.jpg',
-              width: 1200,
-              height: 800,
-            },
-          ],
-        }),
-        { status: 200 }
-      )
-    );
-
-    const { default: Page } = await import('./page');
-    render(<Page />);
-
-    await waitFor(() => {
-      expect(screen.getByText('Media Gallery')).toBeTruthy();
-    });
-
-    expect(screen.getByTestId('photo-count').textContent).toBe('1');
     fireEvent.click(screen.getByText('open photo'));
 
     await waitFor(() => {
       expect(screen.getByTestId('lightbox').textContent).toBe('lightbox:0');
     });
+
+    expect(lightbox).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        slides: expect.arrayContaining([
+          expect.objectContaining({ src: '/gallery/shavon-photo-1.webp' }),
+        ]),
+      })
+    );
   });
 });
 
@@ -144,13 +98,43 @@ describe('gallery helpers', () => {
           id: 'img-1',
           name: 'Poster image',
           url: 'https://cdn.example.com/poster.jpg',
+          thumbnailUrl: 'https://cdn.example.com/thumbs/poster.jpg',
           width: 1000,
           height: 1000,
+          thumbnailWidth: 500,
+          thumbnailHeight: 500,
         },
       ])
     ).toEqual([
       {
         src: 'https://cdn.example.com/poster.jpg',
+        alt: 'Poster image',
+        width: 1000,
+        height: 1000,
+      },
+    ]);
+  });
+
+  it('maps thumbnails when requested', () => {
+    expect(
+      mapGalleryImagesToPhotos(
+        [
+          {
+            id: 'img-1',
+            name: 'Poster image',
+            url: 'https://cdn.example.com/poster.jpg',
+            thumbnailUrl: 'https://cdn.example.com/thumbs/poster.jpg',
+            width: 1000,
+            height: 1000,
+            thumbnailWidth: 500,
+            thumbnailHeight: 500,
+          },
+        ],
+        'thumbnail'
+      )
+    ).toEqual([
+      {
+        src: 'https://cdn.example.com/thumbs/poster.jpg',
         alt: 'Poster image',
         width: 1000,
         height: 1000,
